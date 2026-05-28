@@ -7,6 +7,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type BookType = "novel" | "movie";
 type StageKey =
+  | "waking"
   | "thinking"
   | "header"
   | "styling"
@@ -15,6 +16,7 @@ type StageKey =
   | "finalizing";
 
 const STAGES: { key: StageKey; label: string }[] = [
+  { key: "waking", label: "생성 서버 준비 (최대 30초)" },
   { key: "thinking", label: "작품 분석 및 디자인 컨셉 결정" },
   { key: "header", label: "헤더·타이틀 작성" },
   { key: "styling", label: "분위기 맞춤 디자인 적용" },
@@ -34,10 +36,11 @@ const ESTIMATED_CHARS = 30_000;
 async function getGenerateEndpoint(): Promise<{
   url: string;
   headers: Record<string, string>;
+  workerOrigin: string | null;
 }> {
   const workerUrl = process.env.NEXT_PUBLIC_WORKER_URL?.trim();
   if (!workerUrl) {
-    return { url: "/api/generate", headers: {} };
+    return { url: "/api/generate", headers: {}, workerOrigin: null };
   }
   const supabase = createSupabaseBrowserClient();
   const {
@@ -47,12 +50,33 @@ async function getGenerateEndpoint(): Promise<{
   if (!token) {
     throw new Error("로그인이 필요합니다");
   }
+  const origin = workerUrl.replace(/\/$/, "");
   return {
-    url: `${workerUrl.replace(/\/$/, "")}/generate`,
+    url: `${origin}/generate`,
     headers: {
       Authorization: `Bearer ${token}`,
     },
+    workerOrigin: origin,
   };
+}
+
+/**
+ * Render 무료 티어는 15분 무사용 후 잠듦.
+ * 본 요청 전에 GET /health 로 깨우고, 응답이 오면 정상.
+ * 모바일 브라우저의 짧은 fetch timeout 회피.
+ */
+async function wakeWorker(origin: string): Promise<void> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 50_000);
+  try {
+    await fetch(`${origin}/health`, {
+      method: "GET",
+      cache: "no-store",
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 type ServerEvent =
@@ -79,7 +103,7 @@ export function NewBookForm() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    setCurrentStage("thinking");
+    setCurrentStage("waking");
     setReceivedChars(0);
     const t0 = Date.now();
     setStartedAt(t0);
@@ -89,7 +113,17 @@ export function NewBookForm() {
     }, 500);
 
     try {
-      const { url, headers } = await getGenerateEndpoint();
+      const { url, headers, workerOrigin } = await getGenerateEndpoint();
+
+      // Render 무료 티어가 잠들어있으면 첫 응답이 30초까지 걸려
+      // 모바일 브라우저 fetch timeout(10~30초)에 걸리므로 먼저 깨움
+      if (workerOrigin) {
+        await wakeWorker(workerOrigin).catch(() => {
+          // 깨우기 실패해도 본 요청에서 한 번 더 시도 — 여기선 무시
+        });
+      }
+      setCurrentStage("thinking");
+
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...headers },
