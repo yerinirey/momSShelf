@@ -1,5 +1,5 @@
-worker
-supabase
-seed
-scripts
-DEPLOY.md
+/worker
+/supabase
+/seed
+/scripts
+/DEPLOY.md
