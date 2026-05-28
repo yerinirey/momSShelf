@@ -36,6 +36,12 @@ yarn-error.log*
 # vercel
 .vercel
 
+# supabase CLI 내부 캐시
+supabase/.temp/
+
+# worker 의존성
+worker/node_modules/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

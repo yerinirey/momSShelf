@@ -1,26 +1,160 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --paper: #f4ede0;
+  --paper-dark: #e8dcc4;
+  --ink: #1a1410;
+  --crimson: #8b1a1a;
+  --gold: #b8860b;
+  --wood-dark: #3a2418;
+  --wood: #5a3a24;
+  --wood-light: #8b5a3c;
+  --wood-shine: #a87248;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-crimson: var(--crimson);
+  --color-gold: var(--gold);
+  --color-wood: var(--wood);
+  --font-serif-kr: var(--font-serif-kr);
+  --font-myeongjo: var(--font-myeongjo);
+  --font-cormorant: var(--font-cormorant);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html, body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-serif-kr), serif;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ============ Bookshelf ============ */
+
+.shelf-wood {
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.04) 0 1px,
+      transparent 1px 7px
+    ),
+    linear-gradient(180deg, var(--wood-light) 0%, var(--wood) 50%, var(--wood-dark) 100%);
+}
+
+.shelf-ledge {
+  background: linear-gradient(180deg, var(--wood-dark) 0%, #1d1109 100%);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.5),
+    0 4px 8px rgba(0, 0, 0, 0.3),
+    0 8px 12px -4px rgba(0, 0, 0, 0.4);
+}
+
+.shelf-back {
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 14px,
+      rgba(0, 0, 0, 0.08) 14px 15px
+    ),
+    linear-gradient(180deg, #2a1810 0%, #1a0f08 100%);
+}
+
+/* ============ Book ============ */
+
+.book-3d {
+  transform-style: preserve-3d;
+  transition: transform 0.4s ease, filter 0.3s ease;
+  filter: drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.5));
+}
+
+.book-3d:hover {
+  transform: translateY(-8px) rotateY(-8deg);
+  filter: drop-shadow(8px 12px 16px rgba(0, 0, 0, 0.6));
+}
+
+.book-cover {
+  position: relative;
+  overflow: hidden;
+}
+
+.book-cover::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.4) 0%, transparent 100%);
+  z-index: 2;
+}
+
+.book-cover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    transparent 30%,
+    transparent 70%,
+    rgba(0, 0, 0, 0.1) 100%
+  );
+  pointer-events: none;
+  z-index: 3;
+}
+
+.book-pages {
+  position: absolute;
+  right: 0;
+  top: 2px;
+  bottom: 2px;
+  width: 3px;
+  background: repeating-linear-gradient(
+    0deg,
+    #f4ede0 0 1px,
+    #d4c8b0 1px 2px
+  );
+  z-index: 4;
+}
+
+.pattern-stripes {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent 0 8px,
+    rgba(255, 255, 255, 0.08) 8px 9px
+  );
+}
+
+.pattern-dots {
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.15) 1px, transparent 1.5px);
+  background-size: 12px 12px;
+}
+
+.pattern-diamond {
+  background-image:
+    linear-gradient(45deg, rgba(255, 255, 255, 0.06) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(255, 255, 255, 0.06) 25%, transparent 25%);
+  background-size: 16px 16px;
+}
+
+.pattern-wave {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent 0 6px,
+    rgba(0, 0, 0, 0.08) 6px 7px,
+    transparent 7px 12px
+  );
+}
+
+.book-add {
+  border: 2px dashed rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(4px);
+  transition: all 0.25s ease;
+}
+
+.book-add:hover {
+  border-color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-4px);
 }

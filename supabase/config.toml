@@ -1,0 +1,9 @@
+# Supabase 프로젝트 설정 — supabase init이 만드는 풀 파일 대신
+# 우리에게 필요한 최소 설정만 남김.
+
+project_id = "rggvgebrctgkzonpqqza"
+
+# generate 함수: 게이트웨이 JWT 검증 끄기 (CORS preflight 통과를 위해).
+# 인증은 함수 내부에서 Authorization 헤더로 직접 검사함.
+[functions.generate]
+verify_jwt = false

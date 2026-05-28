@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>왕과 사는 남자 · 인물 관계도</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@300;400;500;600&family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  :root {
+    --ink: #1a1410;
+    --paper: #f4ede0;
+    --paper-dark: #e8dcc4;
+    --crimson: #8b1a1a;
+    --crimson-dark: #5a0e0e;
+    --gold: #b8860b;
+    --gold-light: #d4a544;
+    --jade: #4a6b52;
+    --shadow: rgba(26, 20, 16, 0.15);
+  }
+
+  body {
+    background: var(--paper);
+    font-family: 'Noto Serif KR', 'Nanum Myeongjo', serif;
+    color: var(--ink);
+    overflow-x: hidden;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(circle at 20% 10%, rgba(184, 134, 11, 0.04) 0%, transparent 40%),
+      radial-gradient(circle at 80% 90%, rgba(139, 26, 26, 0.04) 0%, transparent 40%);
+  }
+
+  /* Subtle paper texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(0deg, transparent 0, transparent 2px, rgba(139, 90, 43, 0.015) 2px, rgba(139, 90, 43, 0.015) 3px),
+      repeating-linear-gradient(90deg, transparent 0, transparent 2px, rgba(139, 90, 43, 0.015) 2px, rgba(139, 90, 43, 0.015) 3px);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .container {
+    position: relative;
+    z-index: 2;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 40px 32px;
+  }
+
+  /* Header */
+  header {
+    text-align: center;
+    margin-bottom: 32px;
+    padding-bottom: 32px;
+    border-bottom: 1px solid rgba(26, 20, 16, 0.15);
+    position: relative;
+  }
+
+  header::before, header::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    width: 40px;
+    height: 1px;
+    background: var(--crimson);
+  }
+  header::before { left: 50%; transform: translateX(-100%); }
+  header::after { right: 50%; transform: translateX(100%); }
+
+  .vertical-title {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 16px;
+  }
+
+  .stamp {
+    display: inline-block;
+    width: 48px;
+    height: 48px;
+    border: 2px solid var(--crimson);
+    color: var(--crimson);
+    font-family: 'Nanum Myeongjo', serif;
+    font-weight: 800;
+    font-size: 14px;
+    line-height: 44px;
+    text-align: center;
+    border-radius: 6px;
+    transform: rotate(-4deg);
+    background: rgba(244, 237, 224, 0.7);
+    margin-bottom: 12px;
+    letter-spacing: -1px;
+  }
+
+  h1 {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: clamp(32px, 5vw, 52px);
+    font-weight: 800;
+    letter-spacing: -2px;
+    color: var(--ink);
+    line-height: 1.1;
+    margin-bottom: 8px;
+  }
+
+  h1 .subtitle-en {
+    display: block;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 14px;
+    font-weight: 300;
+    letter-spacing: 6px;
+    color: var(--crimson);
+    text-transform: uppercase;
+    margin-top: 12px;
+  }
+
+  .meta {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    margin-top: 16px;
+    font-size: 13px;
+    color: rgba(26, 20, 16, 0.6);
+    font-weight: 300;
+    letter-spacing: 2px;
+  }
+
+  .meta span {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .meta span::before {
+    content: '·';
+    color: var(--crimson);
+    font-size: 20px;
+  }
+  .meta span:first-child::before { display: none; }
+
+  /* Description */
+  .description {
+    text-align: center;
+    max-width: 720px;
+    margin: 0 auto 32px;
+    font-size: 15px;
+    line-height: 1.9;
+    color: rgba(26, 20, 16, 0.75);
+    font-weight: 400;
+  }
+
+  /* Layout */
+  .layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  /* Sidebar */
+  .sidebar {
+    position: sticky;
+    top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .panel {
+    background: rgba(255, 252, 245, 0.7);
+    border: 1px solid rgba(26, 20, 16, 0.12);
+    border-radius: 4px;
+    padding: 20px;
+    backdrop-filter: blur(8px);
+  }
+
+  .panel-title {
+    font-family: 'Nanum Myeongjo', serif;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 4px;
+    color: var(--crimson);
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(139, 26, 26, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-title::before {
+    content: '';
+    width: 4px;
+    height: 14px;
+    background: var(--crimson);
+  }
+
+  /* Legend */
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 0;
+    font-size: 13px;
+    color: var(--ink);
+    font-weight: 400;
+  }
+
+  .legend-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 1px solid rgba(26, 20, 16, 0.2);
+  }
+
+  .legend-line {
+    width: 20px;
+    height: 0;
+    flex-shrink: 0;
+  }
+
+  /* Detail panel */
+  .detail-panel {
+    min-height: 200px;
+  }
+
+  .detail-empty {
+    color: rgba(26, 20, 16, 0.4);
+    font-size: 13px;
+    text-align: center;
+    padding: 20px 0;
+    line-height: 1.7;
+    font-style: italic;
+  }
+
+  .detail-name {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--ink);
+    margin-bottom: 4px;
+    letter-spacing: -1px;
+  }
+
+  .detail-name-hanja {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: 13px;
+    color: rgba(26, 20, 16, 0.5);
+    margin-bottom: 4px;
+    letter-spacing: 4px;
+  }
+
+  .detail-actor {
+    font-size: 12px;
+    color: var(--crimson);
+    margin-bottom: 14px;
+    letter-spacing: 2px;
+    font-weight: 500;
+  }
+
+  .detail-role {
+    display: inline-block;
+    padding: 4px 10px;
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 11px;
+    letter-spacing: 2px;
+    margin-bottom: 14px;
+    border-radius: 2px;
+  }
+
+  .detail-text {
+    font-size: 13px;
+    line-height: 1.8;
+    color: rgba(26, 20, 16, 0.85);
+    margin-bottom: 12px;
+  }
+
+  .detail-relations {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(26, 20, 16, 0.15);
+  }
+
+  .detail-relations-title {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: rgba(26, 20, 16, 0.5);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+
+  .relation-row {
+    font-size: 12px;
+    line-height: 1.7;
+    color: rgba(26, 20, 16, 0.8);
+    padding: 4px 0;
+    display: flex;
+    gap: 8px;
+  }
+
+  .relation-row .arrow {
+    color: var(--crimson);
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .relation-row .target {
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  /* Graph area */
+  .graph-container {
+    background: rgba(255, 252, 245, 0.5);
+    border: 1px solid rgba(26, 20, 16, 0.12);
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 1 / 1;
+    max-height: 800px;
+  }
+
+  /* Decorative corner brackets */
+  .corner {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-color: var(--crimson);
+    border-style: solid;
+    z-index: 3;
+    pointer-events: none;
+  }
+  .corner.tl { top: 8px; left: 8px; border-width: 1px 0 0 1px; }
+  .corner.tr { top: 8px; right: 8px; border-width: 1px 1px 0 0; }
+  .corner.bl { bottom: 8px; left: 8px; border-width: 0 0 1px 1px; }
+  .corner.br { bottom: 8px; right: 8px; border-width: 0 1px 1px 0; }
+
+  svg.graph {
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: move;
+  }
+
+  /* Node styles */
+  .node-circle {
+    cursor: pointer;
+    transition: stroke-width 0.2s, filter 0.2s;
+  }
+
+  .node-circle:hover {
+    filter: drop-shadow(0 0 8px rgba(139, 26, 26, 0.5));
+  }
+
+  .node-circle.selected {
+    stroke: var(--crimson);
+    stroke-width: 3.5;
+  }
+
+  .node-label {
+    font-family: 'Nanum Myeongjo', serif;
+    font-weight: 700;
+    fill: var(--ink);
+    pointer-events: none;
+    user-select: none;
+    text-anchor: middle;
+  }
+
+  .node-sublabel {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 400;
+    fill: rgba(26, 20, 16, 0.55);
+    pointer-events: none;
+    user-select: none;
+    text-anchor: middle;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+  }
+
+  .link {
+    fill: none;
+    transition: stroke-opacity 0.2s, stroke-width 0.2s;
+  }
+
+  .link-label {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 9px;
+    font-weight: 500;
+    fill: rgba(26, 20, 16, 0.55);
+    pointer-events: none;
+    user-select: none;
+    text-anchor: middle;
+  }
+
+  .dimmed {
+    opacity: 0.15;
+  }
+
+  /* Footer */
+  footer {
+    margin-top: 40px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(26, 20, 16, 0.12);
+    text-align: center;
+    font-size: 11px;
+    color: rgba(26, 20, 16, 0.5);
+    letter-spacing: 3px;
+    line-height: 2;
+  }
+
+  footer .red {
+    color: var(--crimson);
+  }
+
+  /* Tooltip / hint */
+  .hint {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    background: rgba(26, 20, 16, 0.85);
+    color: var(--paper);
+    font-size: 11px;
+    padding: 8px 12px;
+    border-radius: 2px;
+    letter-spacing: 1.5px;
+    z-index: 5;
+    pointer-events: none;
+    transition: opacity 0.4s;
+  }
+
+  .hint.fade {
+    opacity: 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <header>
+    <div class="vertical-title">
+      <div class="stamp">關係</div>
+    </div>
+    <h1>
+      왕과 사는 남자
+      <span class="subtitle-en">Character Relationship Network · 1457</span>
+    </h1>
+    <div class="meta">
+      <span>장항준 감독</span>
+      <span>2026년 작</span>
+      <span>조선 영월 청령포</span>
+    </div>
+  </header>
+
+  <p class="description">
+    숙부에게 왕위를 빼앗긴 어린 왕 이홍위와 그를 둘러싼 인물들의 관계를 신경망 형태로 시각화했습니다.
+    원의 크기는 인물의 비중을, 연결선의 두께는 관계의 강도를, 색깔은 관계의 성격을 나타냅니다.
+    노드를 클릭하면 상세 정보를 볼 수 있고, 드래그하여 위치를 조정할 수 있습니다.
+  </p>
+
+  <div class="layout">
+
+    <aside class="sidebar">
+      <div class="panel">
+        <div class="panel-title">범례 · 凡例</div>
+
+        <div style="margin-bottom: 14px;">
+          <div style="font-size: 10px; letter-spacing: 2px; color: rgba(26,20,16,0.5); margin-bottom: 8px;">진영 · 陣營</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#d4a544;"></div>주인공 · 단종 진영</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#4a6b52;"></div>충신 · 광천골 사람들</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#8b1a1a;"></div>적대 · 세조 진영</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#6b6b6b;"></div>주변 인물</div>
+        </div>
+
+        <div>
+          <div style="font-size: 10px; letter-spacing: 2px; color: rgba(26,20,16,0.5); margin-bottom: 8px;">관계 · 關係</div>
+          <div class="legend-item">
+            <svg width="20" height="6" style="flex-shrink:0;"><line x1="0" y1="3" x2="20" y2="3" stroke="#4a6b52" stroke-width="3"/></svg>
+            우호 · 충심
+          </div>
+          <div class="legend-item">
+            <svg width="20" height="6" style="flex-shrink:0;"><line x1="0" y1="3" x2="20" y2="3" stroke="#8b1a1a" stroke-width="3"/></svg>
+            적대 · 갈등
+          </div>
+          <div class="legend-item">
+            <svg width="20" height="6" style="flex-shrink:0;"><line x1="0" y1="3" x2="20" y2="3" stroke="#b8860b" stroke-width="3"/></svg>
+            혈연 · 가족
+          </div>
+          <div class="legend-item">
+            <svg width="20" height="6" style="flex-shrink:0;"><line x1="0" y1="3" x2="20" y2="3" stroke="#888" stroke-width="2" stroke-dasharray="3 2"/></svg>
+            언급만 · 부재
+          </div>
+        </div>
+      </div>
+
+      <div class="panel detail-panel" id="detailPanel">
+        <div class="panel-title">인물 정보 · 人物</div>
+        <div class="detail-empty" id="detailContent">
+          노드를 클릭하면<br>해당 인물의 상세 정보가<br>여기에 나타납니다
+        </div>
+      </div>
+    </aside>
+
+    <main>
+      <div class="graph-container">
+        <div class="corner tl"></div>
+        <div class="corner tr"></div>
+        <div class="corner bl"></div>
+        <div class="corner br"></div>
+        <svg class="graph" id="graph"></svg>
+        <div class="hint" id="hint">노드 클릭 · 드래그로 이동</div>
+      </div>
+    </main>
+
+  </div>
+
+  <footer>
+    <div class="red">王과 사는 男子</div>
+    <div>장항준 감독 · 2026년 2월 4일 개봉 · 누적 관객 1,628만 명</div>
+    <div style="margin-top: 6px; opacity: 0.7;">유해진 · 박지훈 · 유지태 · 안재홍 · 김민 · 박지환 · 이준혁</div>
+  </footer>
+
+</div>
+
+<script>
+// ============ 데이터 ============
+const characters = [
+  {
+    id: "leeHongwi",
+    name: "이홍위",
+    hanja: "李弘暐",
+    role: "조선 6대왕 · 노산군",
+    actor: "박지훈",
+    faction: "protag",
+    importance: 100,
+    description: "조선 제6대 왕. 12세에 즉위했으나 숙부 수양대군에게 왕위를 빼앗기고 노산군으로 강봉되어 영월 청령포로 유배된다. 16세의 어린 나이에 절망 속에서도 광천골 사람들과 정을 나누며 인간으로서의 존엄을 되찾아간다.",
+    death: "1457년, 17세에 사사. 242년이 지난 1698년(숙종) 단종으로 복위.",
+    fixed: { x: 0, y: 0 }
+  },
+  {
+    id: "eomHeungdo",
+    name: "엄흥도",
+    hanja: "嚴興道",
+    role: "광천골 촌장 · 영월 호장",
+    actor: "유해진",
+    faction: "loyal",
+    importance: 100,
+    description: "강원도 영월 광천골의 촌장(역사적으로는 호장). 가난한 마을 사람들을 먹여 살리기 위해 청령포를 유배지로 만들고자 했으나, 정작 마주한 이는 폐위된 어린 왕이었다. 처음엔 보수주인으로서 감시하는 입장이었으나 점차 진심 어린 충심을 쌓아간다.",
+    death: "단종 사후 시신을 거두는 자는 삼족을 멸한다는 엄명에도 목숨을 걸고 단종의 시신을 수습하여 장례를 치름.",
+  },
+  {
+    id: "hanMyeonghoi",
+    name: "한명회",
+    hanja: "韓明澮",
+    role: "승정원 도승지 · 권력의 실세",
+    actor: "유지태",
+    faction: "antag",
+    importance: 95,
+    description: "계유정난을 기획한 수양대군의 오른팔. 영화에서는 등장하지 않는 세조를 대신해 권력의 얼굴로 등장한다. 단종을 스스로 목숨을 끊게 만들기 위해 영월 유배를 결정하고, 금성대군의 복위 음모를 감시하다 결국 적발한다. 곤룡포를 연상시키는 붉은 관복으로 왕에 버금가는 위세를 드러낸다.",
+    death: "73세에 천수를 누렸으나, 사후 17년 뒤 갑자사화에 연루되어 부관참시당함.",
+  },
+  {
+    id: "geumseong",
+    name: "금성대군",
+    hanja: "錦城大君",
+    role: "단종의 숙부 · 복위 거사 주도",
+    actor: "안재홍",
+    faction: "loyal",
+    importance: 75,
+    description: "세종의 여섯째 아들이자 단종의 숙부. 비밀리에 단종에게 연락을 보내 왕위를 되찾기 위한 거사를 준비한다. 그러나 한명회의 감시망에 걸려 거사는 관노의 고변으로 발각되어 실패. 결국 체포되어 사사된다. 단종 복위 운동의 핵심 인물.",
+    death: "거사 실패 후 체포되어 사사됨.",
+  },
+  {
+    id: "taesan",
+    name: "엄태산",
+    hanja: "嚴泰山",
+    role: "엄흥도의 아들",
+    actor: "김민",
+    faction: "loyal",
+    importance: 60,
+    description: "촌장 엄흥도의 아들. 노산군에게서 글을 배우는 제자가 된다. 어느 날 허락 없이 노산군의 거처에 들어갔다가 군사들에게 심한 매질을 당하고, 이 사건은 노산군이 마침내 거사에 참여하기로 결심하는 결정적 계기가 된다. 아버지 엄흥도와 돈독한 부자 관계.",
+  },
+  {
+    id: "maehwa",
+    name: "매화",
+    hanja: "梅花",
+    role: "노산군의 궁녀",
+    actor: "전미도",
+    faction: "loyal",
+    importance: 55,
+    description: "노산군을 곁에서 모신 궁녀. 단종이 활줄에 죽임을 당하고 시신이 강물에 버려진 후, 그 자리에 몸을 던져 뒤따른다. 충성과 비극의 상징적 인물.",
+    death: "단종 사후 강물에 투신.",
+  },
+  {
+    id: "sejo",
+    name: "세조 (수양대군)",
+    hanja: "世祖 / 首陽大君",
+    role: "조선 7대왕 · 단종의 숙부",
+    actor: "(부재 · 언급만)",
+    faction: "antag",
+    importance: 70,
+    description: "단종의 숙부이자 왕위 찬탈자. 영화에 직접 등장하지는 않으며, 한명회를 통해 권력의 의지가 전달된다. 장항준 감독은 '진짜 악의 축은 보이지 않을수록 더 무섭다'며 의도적으로 부재의 형태로 그렸다. 한명회가 그의 분신 역할을 한다.",
+    note: "영화에서 직접 등장하지 않고 언급만 됨",
+  },
+  {
+    id: "noruchang",
+    name: "노루골 촌장",
+    hanja: "",
+    role: "이웃 마을 촌장",
+    actor: "이준혁",
+    faction: "minor",
+    importance: 40,
+    description: "광천골과 대비되는 노루골의 촌장. 광천골 사람들과 신선한 케미스트리를 보여주는 인물.",
+  },
+  {
+    id: "yeongwol",
+    name: "영월군수",
+    hanja: "",
+    role: "지방 관리",
+    actor: "박지환",
+    faction: "minor",
+    importance: 35,
+    description: "영월군수. 등장만으로 화제를 불러모은 박지환의 특별 출연. 한명회의 명을 받아 단종의 유배 생활을 관리·감시하는 위치.",
+  },
+  {
+    id: "villagers",
+    name: "광천골 마을 사람들",
+    hanja: "光川谷 民",
+    role: "마을 주민들",
+    actor: "(앙상블)",
+    faction: "loyal",
+    importance: 50,
+    description: "엄흥도가 이끄는 영월 광천골의 가난한 마을 사람들. 단종이 일일이 자신들의 이름을 불러주며 기억하는 모습에 크게 감동받는다. 단종을 진심으로 따르는 백성의 상징.",
+  },
+];
+
+// 관계: source → target, type, strength
+const relations = [
+  // 단종 - 핵심 관계
+  { source: "leeHongwi", target: "eomHeungdo", type: "loyal", strength: 10, label: "동행 · 마지막 4개월" },
+  { source: "leeHongwi", target: "hanMyeonghoi", type: "hostile", strength: 9, label: "감시 · 박해" },
+  { source: "leeHongwi", target: "sejo", type: "blood-hostile", strength: 9, label: "왕위 찬탈" },
+  { source: "leeHongwi", target: "geumseong", type: "blood", strength: 7, label: "복위 동맹 · 숙부" },
+  { source: "leeHongwi", target: "taesan", type: "loyal", strength: 6, label: "스승과 제자" },
+  { source: "leeHongwi", target: "maehwa", type: "loyal", strength: 6, label: "충심 · 동반" },
+  { source: "leeHongwi", target: "villagers", type: "loyal", strength: 5, label: "백성과 왕" },
+
+  // 엄흥도
+  { source: "eomHeungdo", target: "taesan", type: "blood", strength: 8, label: "부자 관계" },
+  { source: "eomHeungdo", target: "villagers", type: "loyal", strength: 7, label: "촌장 · 지도자" },
+  { source: "eomHeungdo", target: "yeongwol", type: "neutral", strength: 4, label: "관 · 민 관계" },
+  { source: "eomHeungdo", target: "noruchang", type: "neutral", strength: 4, label: "이웃 마을" },
+  { source: "eomHeungdo", target: "hanMyeonghoi", type: "hostile", strength: 6, label: "굴욕과 분노" },
+
+  // 한명회
+  { source: "hanMyeonghoi", target: "sejo", type: "loyal", strength: 9, label: "수양의 오른팔" },
+  { source: "hanMyeonghoi", target: "geumseong", type: "hostile", strength: 7, label: "감시 · 적발" },
+  { source: "hanMyeonghoi", target: "yeongwol", type: "neutral", strength: 5, label: "상명하복" },
+
+  // 금성대군
+  { source: "geumseong", target: "sejo", type: "blood-hostile", strength: 7, label: "형제 · 적대" },
+
+  // 매화
+  { source: "maehwa", target: "eomHeungdo", type: "loyal", strength: 4, label: "단종 곁의 사람들" },
+
+  // 마을 사람들
+  { source: "villagers", target: "noruchang", type: "neutral", strength: 3, label: "이웃 마을" },
+];
+
+// ============ 색상 시스템 ============
+const factionColors = {
+  protag: "#d4a544",   // 단종 - 골드
+  loyal: "#4a6b52",    // 충신 - 옥색
+  antag: "#8b1a1a",    // 적대 - 진홍
+  minor: "#6b6b6b",    // 주변 - 회색
+};
+
+const linkColors = {
+  loyal: "#4a6b52",
+  hostile: "#8b1a1a",
+  blood: "#b8860b",
+  "blood-hostile": "#8b1a1a",
+  neutral: "#888888",
+};
+
+// ============ 그래프 렌더링 ============
+const svg = d3.select("#graph");
+const container = svg.node().parentNode;
+
+let width, height;
+
+function updateSize() {
+  const rect = container.getBoundingClientRect();
+  width = rect.width;
+  height = rect.height;
+  svg.attr("viewBox", `0 0 ${width} ${height}`);
+}
+updateSize();
+
+// Defs - arrow markers and patterns
+const defs = svg.append("defs");
+
+// Concentric ring backdrop (subtle ink-wash effect)
+const backdrop = svg.append("g").attr("class", "backdrop");
+const cx = width / 2, cy = height / 2;
+[0.45, 0.32, 0.2].forEach((r, i) => {
+  backdrop.append("circle")
+    .attr("cx", cx)
+    .attr("cy", cy)
+    .attr("r", Math.min(width, height) * r)
+    .attr("fill", "none")
+    .attr("stroke", "#1a1410")
+    .attr("stroke-opacity", 0.04 + i * 0.02)
+    .attr("stroke-width", 0.5)
+    .attr("stroke-dasharray", i === 0 ? "2 4" : null);
+});
+
+// Center marker (compass-like)
+backdrop.append("circle")
+  .attr("cx", cx).attr("cy", cy).attr("r", 2)
+  .attr("fill", "#8b1a1a").attr("opacity", 0.3);
+
+// Build node/link copies for d3
+const nodes = characters.map(c => ({...c}));
+const links = relations.map(r => ({...r}));
+
+// Node radius scale
+const radiusScale = d3.scaleLinear()
+  .domain([30, 100])
+  .range([22, 50]);
+
+// Link width scale
+const linkWidthScale = d3.scaleLinear()
+  .domain([1, 10])
+  .range([1, 5]);
+
+// Force simulation
+const simulation = d3.forceSimulation(nodes)
+  .force("link", d3.forceLink(links).id(d => d.id)
+    .distance(d => 220 - d.strength * 8)
+    .strength(d => 0.3 + d.strength * 0.04))
+  .force("charge", d3.forceManyBody()
+    .strength(d => -800 - d.importance * 8))
+  .force("center", d3.forceCenter(width / 2, height / 2).strength(0.05))
+  .force("collide", d3.forceCollide()
+    .radius(d => radiusScale(d.importance) + 18)
+    .strength(0.95))
+  .force("x", d3.forceX(width / 2).strength(0.04))
+  .force("y", d3.forceY(height / 2).strength(0.04));
+
+// Pin the protagonist (Lee Hongwi) near center for visual anchor
+const protag = nodes.find(n => n.id === "leeHongwi");
+protag.fx = width / 2;
+protag.fy = height / 2;
+
+// Links
+const linkGroup = svg.append("g").attr("class", "links");
+const linkPath = linkGroup.selectAll(".link")
+  .data(links)
+  .enter()
+  .append("path")
+  .attr("class", "link")
+  .attr("stroke", d => linkColors[d.type])
+  .attr("stroke-width", d => linkWidthScale(d.strength))
+  .attr("stroke-opacity", 0.55)
+  .attr("stroke-dasharray", d => d.type === "blood-hostile" || (d.target === "sejo" || d.source === "sejo") ? "5 3" : null);
+
+const linkLabels = linkGroup.selectAll(".link-label")
+  .data(links)
+  .enter()
+  .append("text")
+  .attr("class", "link-label")
+  .text(d => d.label);
+
+// Nodes
+const nodeGroup = svg.append("g").attr("class", "nodes");
+const nodeG = nodeGroup.selectAll(".node")
+  .data(nodes)
+  .enter()
+  .append("g")
+  .attr("class", "node")
+  .style("cursor", "pointer")
+  .call(d3.drag()
+    .on("start", dragStarted)
+    .on("drag", dragged)
+    .on("end", dragEnded));
+
+// Outer ring (decorative)
+nodeG.append("circle")
+  .attr("class", "node-ring")
+  .attr("r", d => radiusScale(d.importance) + 6)
+  .attr("fill", "none")
+  .attr("stroke", d => factionColors[d.faction])
+  .attr("stroke-opacity", 0.2)
+  .attr("stroke-width", 0.5)
+  .attr("stroke-dasharray", "2 2");
+
+// Main circle
+nodeG.append("circle")
+  .attr("class", "node-circle")
+  .attr("r", d => radiusScale(d.importance))
+  .attr("fill", d => factionColors[d.faction])
+  .attr("fill-opacity", d => d.faction === "antag" && d.id === "sejo" ? 0.4 : 0.85)
+  .attr("stroke", d => d3.color(factionColors[d.faction]).darker(0.6))
+  .attr("stroke-width", 1.5)
+  .attr("stroke-dasharray", d => d.id === "sejo" ? "3 2" : null);
+
+// Inner accent (for protagonist)
+nodeG.filter(d => d.id === "leeHongwi" || d.id === "eomHeungdo")
+  .append("circle")
+  .attr("r", d => radiusScale(d.importance) - 6)
+  .attr("fill", "none")
+  .attr("stroke", "#fff")
+  .attr("stroke-opacity", 0.4)
+  .attr("stroke-width", 0.5);
+
+// Korean name label
+nodeG.append("text")
+  .attr("class", "node-label")
+  .attr("dy", "0.1em")
+  .style("font-size", d => `${Math.max(11, radiusScale(d.importance) * 0.32)}px`)
+  .style("fill", d => d.faction === "minor" ? "#fff" : (d.faction === "protag" ? "#1a1410" : "#fff"))
+  .text(d => d.name);
+
+// Hanja sublabel
+nodeG.append("text")
+  .attr("class", "node-sublabel")
+  .attr("dy", d => `${radiusScale(d.importance) * 0.55}px`)
+  .style("fill", d => d.faction === "minor" ? "rgba(255,255,255,0.7)" : (d.faction === "protag" ? "rgba(26,20,16,0.6)" : "rgba(255,255,255,0.7)"))
+  .text(d => d.hanja);
+
+// Click handler
+nodeG.on("click", function(event, d) {
+  event.stopPropagation();
+  selectNode(d);
+});
+
+// Background click clears selection
+svg.on("click", () => {
+  selectNode(null);
+});
+
+// Selection state
+let selectedId = null;
+
+function selectNode(d) {
+  selectedId = d ? d.id : null;
+  updateDetail(d);
+  highlight(d);
+}
+
+function highlight(d) {
+  if (!d) {
+    nodeG.classed("dimmed", false);
+    nodeG.selectAll(".node-circle").classed("selected", false);
+    linkPath.classed("dimmed", false).attr("stroke-opacity", 0.55);
+    linkLabels.classed("dimmed", false);
+    return;
+  }
+  // Find connected nodes
+  const connected = new Set([d.id]);
+  links.forEach(l => {
+    const sId = typeof l.source === 'object' ? l.source.id : l.source;
+    const tId = typeof l.target === 'object' ? l.target.id : l.target;
+    if (sId === d.id) connected.add(tId);
+    if (tId === d.id) connected.add(sId);
+  });
+  nodeG.classed("dimmed", n => !connected.has(n.id));
+  nodeG.selectAll(".node-circle").classed("selected", n => n.id === d.id);
+  linkPath.classed("dimmed", l => {
+    const sId = typeof l.source === 'object' ? l.source.id : l.source;
+    const tId = typeof l.target === 'object' ? l.target.id : l.target;
+    return !(sId === d.id || tId === d.id);
+  }).attr("stroke-opacity", l => {
+    const sId = typeof l.source === 'object' ? l.source.id : l.source;
+    const tId = typeof l.target === 'object' ? l.target.id : l.target;
+    return (sId === d.id || tId === d.id) ? 0.85 : 0.1;
+  });
+  linkLabels.classed("dimmed", l => {
+    const sId = typeof l.source === 'object' ? l.source.id : l.source;
+    const tId = typeof l.target === 'object' ? l.target.id : l.target;
+    return !(sId === d.id || tId === d.id);
+  });
+}
+
+function updateDetail(d) {
+  const panel = document.getElementById("detailContent");
+  if (!d) {
+    panel.innerHTML = `<div class="detail-empty">노드를 클릭하면<br>해당 인물의 상세 정보가<br>여기에 나타납니다</div>`;
+    return;
+  }
+
+  const factionLabel = {
+    protag: "주인공 · 단종 진영",
+    loyal: "충신 · 광천골 사람들",
+    antag: "적대 · 세조 진영",
+    minor: "주변 인물",
+  }[d.faction];
+
+  // Find relations of this character
+  const myRelations = relations.filter(r =>
+    r.source === d.id || r.target === d.id
+  ).map(r => {
+    const otherId = r.source === d.id ? r.target : r.source;
+    const other = characters.find(c => c.id === otherId);
+    return { other, type: r.type, label: r.label, strength: r.strength };
+  }).sort((a, b) => b.strength - a.strength);
+
+  let relationsHTML = '';
+  if (myRelations.length > 0) {
+    relationsHTML = `
+      <div class="detail-relations">
+        <div class="detail-relations-title">주요 관계 · 主要 關係</div>
+        ${myRelations.map(r => `
+          <div class="relation-row">
+            <span class="arrow">→</span>
+            <span><span class="target">${r.other.name}</span> · ${r.label}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  const deathHTML = d.death ? `<div class="detail-text" style="color: var(--crimson); font-size: 12px; padding-top: 8px; border-top: 1px dashed rgba(139,26,26,0.2); margin-top: 10px;"><strong>최후 ·</strong> ${d.death}</div>` : '';
+  const noteHTML = d.note ? `<div style="font-size: 11px; color: rgba(26,20,16,0.5); font-style: italic; margin-bottom: 10px;">※ ${d.note}</div>` : '';
+
+  panel.innerHTML = `
+    <div class="detail-name">${d.name}</div>
+    ${d.hanja ? `<div class="detail-name-hanja">${d.hanja}</div>` : ''}
+    <div class="detail-actor">${d.actor} 분</div>
+    <div class="detail-role">${d.role}</div>
+    ${noteHTML}
+    <div class="detail-text">${d.description}</div>
+    ${deathHTML}
+    ${relationsHTML}
+  `;
+}
+
+// Tick handler with curved paths
+simulation.on("tick", () => {
+  linkPath.attr("d", d => {
+    const dx = d.target.x - d.source.x;
+    const dy = d.target.y - d.source.y;
+    const dr = Math.sqrt(dx * dx + dy * dy) * 2;
+    return `M${d.source.x},${d.source.y}A${dr},${dr} 0 0,1 ${d.target.x},${d.target.y}`;
+  });
+
+  linkLabels
+    .attr("x", d => (d.source.x + d.target.x) / 2)
+    .attr("y", d => (d.source.y + d.target.y) / 2);
+
+  nodeG.attr("transform", d => `translate(${d.x},${d.y})`);
+});
+
+function dragStarted(event, d) {
+  if (!event.active) simulation.alphaTarget(0.3).restart();
+  d.fx = d.x;
+  d.fy = d.y;
+}
+
+function dragged(event, d) {
+  d.fx = event.x;
+  d.fy = event.y;
+}
+
+function dragEnded(event, d) {
+  if (!event.active) simulation.alphaTarget(0);
+  // Keep protagonist pinned, others released
+  if (d.id !== "leeHongwi") {
+    d.fx = null;
+    d.fy = null;
+  }
+}
+
+// Resize handling
+window.addEventListener("resize", () => {
+  updateSize();
+  simulation.force("center", d3.forceCenter(width / 2, height / 2).strength(0.05));
+  protag.fx = width / 2;
+  protag.fy = height / 2;
+  simulation.alpha(0.3).restart();
+});
+
+// Hint fade
+setTimeout(() => {
+  document.getElementById("hint").classList.add("fade");
+}, 4000);
+
+// Run simulation a bit before settling
+simulation.alpha(1).restart();
+
+</script>
+
+</body>
+</html>

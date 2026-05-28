@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>신 · 인물 관계도</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@200;300;400;500;600;700&family=Cormorant+Garamond:wght@300;400;500;600&family=Cinzel:wght@400;500;600;700&family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --void: #07091a;
+    --void-deep: #03040d;
+    --cosmos: #0f1530;
+    --aether: #1a2150;
+    --gold: #d4af37;
+    --gold-light: #f0d674;
+    --gold-deep: #8b6f1f;
+    --ivory: #f0e9d2;
+    --ivory-dim: #b8b09a;
+    --olympus: #c8a8e0;
+    --olive: #6b8e5a;
+    --crimson: #8b2942;
+    --azure: #4a7ba7;
+    --silver: #9aa4b8;
+    --shadow: rgba(3, 4, 13, 0.7);
+  }
+
+  body {
+    background: var(--void);
+    font-family: 'Noto Serif KR', serif;
+    color: var(--ivory);
+    overflow-x: hidden;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at 25% 10%, rgba(212, 175, 55, 0.08) 0%, transparent 55%),
+      radial-gradient(ellipse at 75% 90%, rgba(200, 168, 224, 0.06) 0%, transparent 55%),
+      radial-gradient(ellipse at 50% 50%, rgba(74, 123, 167, 0.04) 0%, transparent 70%),
+      linear-gradient(180deg, var(--void-deep) 0%, var(--void) 50%, var(--void-deep) 100%);
+    background-attachment: fixed;
+  }
+
+  /* Star field */
+  .star-layer {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    overflow: hidden;
+  }
+
+  .star {
+    position: absolute;
+    background: var(--ivory);
+    border-radius: 50%;
+    animation: twinkle linear infinite;
+  }
+
+  .star.gold { background: var(--gold-light); box-shadow: 0 0 4px var(--gold); }
+
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.2; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.1); }
+  }
+
+  /* Slow drift constellation lines */
+  .constellation {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.15;
+  }
+
+  .container {
+    position: relative;
+    z-index: 2;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 60px 32px 40px;
+  }
+
+  /* Header */
+  header {
+    text-align: center;
+    margin-bottom: 40px;
+    position: relative;
+  }
+
+  .epigraph {
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 10px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 28px;
+    opacity: 0.85;
+  }
+
+  .epigraph::before, .epigraph::after {
+    content: '✦';
+    margin: 0 16px;
+    color: var(--gold);
+    font-size: 10px;
+  }
+
+  h1 {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: clamp(48px, 8vw, 96px);
+    font-weight: 800;
+    letter-spacing: 8px;
+    color: var(--ivory);
+    line-height: 1;
+    margin-bottom: 16px;
+    background: linear-gradient(180deg, var(--ivory) 0%, var(--gold-light) 50%, var(--gold-deep) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 40px rgba(212, 175, 55, 0.25);
+  }
+
+  .h1-en {
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    font-weight: 400;
+    letter-spacing: 16px;
+    color: var(--gold-light);
+    margin-bottom: 24px;
+    opacity: 0.7;
+    padding-left: 16px;
+  }
+
+  .author {
+    font-family: 'Noto Serif KR', serif;
+    font-weight: 300;
+    font-size: 13px;
+    color: var(--ivory-dim);
+    letter-spacing: 5px;
+    margin-bottom: 8px;
+  }
+
+  .author .name {
+    color: var(--ivory);
+    font-weight: 500;
+    border-bottom: 1px solid var(--gold-deep);
+    padding-bottom: 2px;
+  }
+
+  .meta {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 24px;
+    font-size: 11px;
+    color: var(--ivory-dim);
+    letter-spacing: 3px;
+    flex-wrap: wrap;
+    opacity: 0.7;
+  }
+
+  .meta .dot {
+    color: var(--gold);
+    margin: 0 8px;
+  }
+
+  /* Description */
+  .description {
+    text-align: center;
+    max-width: 800px;
+    margin: 0 auto 32px;
+    font-size: 14px;
+    line-height: 2.1;
+    color: var(--ivory-dim);
+    font-weight: 300;
+    letter-spacing: 0.5px;
+  }
+
+  .description em {
+    font-style: normal;
+    color: var(--gold-light);
+    border-bottom: 1px dotted var(--gold-deep);
+  }
+
+  /* Layout */
+  .layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  @media (max-width: 920px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { position: static !important; }
+  }
+
+  /* Sidebar */
+  .sidebar {
+    position: sticky;
+    top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-track { background: transparent; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--gold-deep); border-radius: 2px; opacity: 0.5; }
+
+  .panel {
+    background: rgba(15, 21, 48, 0.55);
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-radius: 2px;
+    padding: 22px;
+    backdrop-filter: blur(12px);
+    position: relative;
+  }
+
+  .panel::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    width: 24px;
+    height: 24px;
+    border-top: 1px solid var(--gold);
+    border-left: 1px solid var(--gold);
+  }
+
+  .panel::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 24px;
+    height: 24px;
+    border-bottom: 1px solid var(--gold);
+    border-right: 1px solid var(--gold);
+  }
+
+  .panel-title {
+    font-family: 'Cinzel', serif;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 6px;
+    color: var(--gold-light);
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    text-transform: uppercase;
+  }
+
+  .panel-title .symbol {
+    font-size: 14px;
+    color: var(--gold);
+  }
+
+  /* Legend */
+  .legend-section {
+    margin-bottom: 18px;
+  }
+  .legend-section:last-child { margin-bottom: 0; }
+
+  .legend-section-label {
+    font-family: 'Cinzel', serif;
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--gold);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 0;
+    font-size: 12px;
+    color: var(--ivory);
+    font-weight: 300;
+    letter-spacing: 0.5px;
+  }
+
+  .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 1px solid rgba(240, 233, 210, 0.2);
+  }
+
+  /* Detail panel */
+  .detail-panel {
+    min-height: 280px;
+  }
+
+  .detail-empty {
+    color: var(--ivory-dim);
+    font-size: 12px;
+    text-align: center;
+    padding: 40px 8px;
+    line-height: 2;
+    font-style: italic;
+    opacity: 0.6;
+    font-weight: 300;
+    letter-spacing: 0.5px;
+  }
+
+  .detail-empty::before {
+    content: '✦';
+    display: block;
+    font-size: 18px;
+    color: var(--gold-deep);
+    margin-bottom: 16px;
+  }
+
+  .detail-archetype {
+    font-family: 'Cinzel', serif;
+    font-size: 9px;
+    letter-spacing: 4px;
+    color: var(--gold);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+
+  .detail-name {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--ivory);
+    margin-bottom: 4px;
+    letter-spacing: 0;
+    line-height: 1.1;
+  }
+
+  .detail-name-en {
+    font-family: 'Cinzel', serif;
+    font-size: 12px;
+    color: var(--gold-light);
+    margin-bottom: 16px;
+    letter-spacing: 4px;
+    font-weight: 500;
+  }
+
+  .detail-tagline {
+    font-size: 12px;
+    color: var(--ivory);
+    margin-bottom: 16px;
+    padding: 10px 12px;
+    background: rgba(212, 175, 55, 0.06);
+    border-left: 2px solid var(--gold);
+    line-height: 1.7;
+    font-style: italic;
+    font-weight: 300;
+  }
+
+  .detail-section {
+    margin-bottom: 16px;
+  }
+
+  .detail-section-title {
+    font-family: 'Cinzel', serif;
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--gold);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .detail-section-title::before {
+    content: '✦';
+    font-size: 8px;
+    color: var(--gold);
+  }
+
+  .detail-text {
+    font-size: 13px;
+    line-height: 1.85;
+    color: var(--ivory);
+    font-weight: 300;
+    letter-spacing: 0.3px;
+  }
+
+  .event-list {
+    list-style: none;
+    padding: 0;
+  }
+
+  .event-item {
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--ivory);
+    padding: 8px 0 8px 16px;
+    border-left: 1px solid rgba(212, 175, 55, 0.2);
+    margin-bottom: 4px;
+    position: relative;
+    font-weight: 300;
+  }
+
+  .event-item::before {
+    content: '';
+    position: absolute;
+    left: -3px;
+    top: 14px;
+    width: 5px;
+    height: 5px;
+    background: var(--gold);
+    border-radius: 50%;
+  }
+
+  .event-item .when {
+    color: var(--gold-light);
+    font-size: 10px;
+    letter-spacing: 1px;
+    display: block;
+    margin-bottom: 2px;
+    font-weight: 500;
+    font-family: 'Cinzel', serif;
+  }
+
+  .relation-list { list-style: none; padding: 0; }
+
+  .relation-row {
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--ivory);
+    padding: 5px 0;
+    display: flex;
+    gap: 8px;
+    font-weight: 300;
+  }
+
+  .relation-row .arrow {
+    color: var(--gold);
+    flex-shrink: 0;
+  }
+
+  .relation-row .target {
+    color: var(--ivory);
+    font-weight: 500;
+  }
+
+  /* Graph area */
+  .graph-container {
+    background: rgba(3, 4, 13, 0.6);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    border-radius: 2px;
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 1 / 1;
+    max-height: 820px;
+  }
+
+  /* Decorative tick marks at corners */
+  .tick {
+    position: absolute;
+    z-index: 3;
+    pointer-events: none;
+    color: var(--gold);
+    font-size: 10px;
+    letter-spacing: 3px;
+    font-family: 'Cinzel', serif;
+    opacity: 0.5;
+    font-weight: 500;
+  }
+  .tick.tl { top: 12px; left: 14px; }
+  .tick.tr { top: 12px; right: 14px; }
+  .tick.bl { bottom: 12px; left: 14px; }
+  .tick.br { bottom: 12px; right: 14px; }
+
+  svg.graph {
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: grab;
+  }
+
+  svg.graph:active { cursor: grabbing; }
+
+  /* Node visuals */
+  .node-circle {
+    cursor: pointer;
+    transition: filter 0.3s ease;
+  }
+
+  .node-circle:hover {
+    filter: brightness(1.2) drop-shadow(0 0 8px rgba(212, 175, 55, 0.5));
+  }
+
+  .node-circle.selected {
+    stroke-width: 2.5 !important;
+  }
+
+  .node-label {
+    font-family: 'Nanum Myeongjo', serif;
+    font-weight: 700;
+    fill: var(--ivory);
+    pointer-events: none;
+    user-select: none;
+    text-anchor: middle;
+    paint-order: stroke;
+    stroke: rgba(3, 4, 13, 0.85);
+    stroke-width: 3;
+    stroke-linejoin: round;
+  }
+
+  .node-sublabel {
+    font-family: 'Cinzel', serif;
+    font-weight: 500;
+    fill: rgba(240, 233, 210, 0.7);
+    pointer-events: none;
+    user-select: none;
+    text-anchor: middle;
+    font-size: 9px;
+    letter-spacing: 2px;
+    paint-order: stroke;
+    stroke: rgba(3, 4, 13, 0.85);
+    stroke-width: 2;
+  }
+
+  .link {
+    fill: none;
+    transition: stroke-opacity 0.3s, stroke-width 0.3s;
+  }
+
+  .link-label {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 9px;
+    font-weight: 300;
+    fill: rgba(240, 233, 210, 0.55);
+    pointer-events: none;
+    user-select: none;
+    text-anchor: middle;
+    paint-order: stroke;
+    stroke: rgba(3, 4, 13, 0.9);
+    stroke-width: 3;
+  }
+
+  .dimmed { opacity: 0.12; }
+
+  /* Pulsing for divine characters */
+  @keyframes divine-pulse {
+    0%, 100% { opacity: 0.85; }
+    50% { opacity: 1; }
+  }
+  .divine .node-circle { animation: divine-pulse 3s ease-in-out infinite; }
+
+  /* Footer */
+  footer {
+    margin-top: 48px;
+    padding-top: 28px;
+    border-top: 1px solid rgba(212, 175, 55, 0.15);
+    text-align: center;
+    font-size: 11px;
+    color: var(--ivory-dim);
+    letter-spacing: 3px;
+    line-height: 2;
+    font-weight: 300;
+  }
+
+  footer .quote {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: 14px;
+    color: var(--ivory);
+    margin-bottom: 12px;
+    letter-spacing: 1px;
+    font-weight: 300;
+    font-style: italic;
+  }
+
+  footer .gold-line {
+    color: var(--gold);
+    margin-bottom: 8px;
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    letter-spacing: 4px;
+  }
+
+  /* Hint */
+  .hint {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    background: rgba(3, 4, 13, 0.85);
+    color: var(--ivory-dim);
+    font-size: 10px;
+    padding: 7px 12px;
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    border-radius: 2px;
+    letter-spacing: 2px;
+    z-index: 5;
+    pointer-events: none;
+    transition: opacity 0.6s;
+  }
+  .hint.fade { opacity: 0; }
+
+</style>
+</head>
+<body>
+
+<!-- Star field -->
+<div class="star-layer" id="starLayer"></div>
+
+<div class="container">
+
+  <header>
+    <div class="epigraph">Bernard Werber · 2004–2008</div>
+    <h1>신</h1>
+    <div class="h1-en">LES DIEUX</div>
+    <div class="author">
+      Roman par <span class="name">베르나르 베르베르</span>
+    </div>
+    <div class="meta">
+      <span>장편소설</span>
+      <span class="dot">✦</span>
+      <span>전 6권</span>
+      <span class="dot">✦</span>
+      <span>올림푸스 · 에덴</span>
+      <span class="dot">✦</span>
+      <span>신 후보생들의 게임</span>
+    </div>
+  </header>
+
+  <p class="description">
+    죽은 후 천사가 되었던 <em>미카엘 팽송</em>이 더 높은 차원으로 올라가, 144명의 신 후보생 중 하나가 되어 18호 지구를 다스리는 이야기.
+    원의 크기는 서사적 비중을, 연결선의 색은 관계의 결을 나타내며,
+    창조주 영역의 존재들은 점선과 떨림으로 표시됩니다.
+  </p>
+
+  <div class="layout">
+
+    <aside class="sidebar">
+
+      <div class="panel">
+        <div class="panel-title">
+          <span>RANGS</span>
+          <span class="symbol">✦</span>
+        </div>
+
+        <div class="legend-section">
+          <div class="legend-section-label">존재의 위계 · Hiérarchie</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#d4af37;"></div>주인공 · 미카엘 팽송</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#c8a8e0;"></div>신 후보생 · 동료</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#8b2942;"></div>적대자 · 검은 그림자</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#4a7ba7;"></div>스승 · 그리스 신들</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#6b8e5a;"></div>인간 · 여신 후보생들</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#9aa4b8;"></div>창조주 · 상위 존재</div>
+        </div>
+
+        <div class="legend-section">
+          <div class="legend-section-label">관계의 결 · Liens</div>
+          <div class="legend-item">
+            <svg width="22" height="6" style="flex-shrink:0;"><line x1="0" y1="3" x2="22" y2="3" stroke="#4a7ba7" stroke-width="3"/></svg>
+            우정 · 동료
+          </div>
+          <div class="legend-item">
+            <svg width="22" height="6" style="flex-shrink:0;"><line x1="0" y1="3" x2="22" y2="3" stroke="#d4af37" stroke-width="3"/></svg>
+            사랑 · 영혼의 끌림
+          </div>
+          <div class="legend-item">
+            <svg width="22" height="6" style="flex-shrink:0;"><line x1="0" y1="3" x2="22" y2="3" stroke="#8b2942" stroke-width="3"/></svg>
+            적대 · 음모
+          </div>
+          <div class="legend-item">
+            <svg width="22" height="6" style="flex-shrink:0;"><line x1="0" y1="3" x2="22" y2="3" stroke="#c8a8e0" stroke-width="3"/></svg>
+            사제 · 가르침
+          </div>
+          <div class="legend-item">
+            <svg width="22" height="6" style="flex-shrink:0;"><line x1="0" y1="3" x2="22" y2="3" stroke="#888" stroke-width="2" stroke-dasharray="3 2"/></svg>
+            상위 차원 · 미지
+          </div>
+        </div>
+      </div>
+
+      <div class="panel detail-panel" id="detailPanel">
+        <div class="panel-title">
+          <span>PERSONA</span>
+          <span class="symbol">✦</span>
+        </div>
+        <div id="detailContent">
+          <div class="detail-empty">
+            한 별을 클릭하면<br>
+            그 인물의 시간이<br>
+            여기 펼쳐집니다
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main>
+      <div class="graph-container">
+        <span class="tick tl">AETHER</span>
+        <span class="tick tr">OLYMPUS</span>
+        <span class="tick bl">EDEN</span>
+        <span class="tick br">TERRA · 18</span>
+        <svg class="graph" id="graph"></svg>
+        <div class="hint" id="hint">별을 클릭 · 드래그하여 이동</div>
+      </div>
+    </main>
+
+  </div>
+
+  <footer>
+    <div class="quote">"우리는 사랑하는 만큼 신이 될 수 있다."</div>
+    <div class="gold-line">— BERNARD WERBER —</div>
+    <div style="opacity: 0.6;">『신』 (Nous, les dieux · Le Souffle des dieux · Le Mystère des dieux) · 2004–2008</div>
+  </footer>
+
+</div>
+
+<script>
+// ============== 별빛 효과 ==============
+(function makeStars() {
+  const layer = document.getElementById('starLayer');
+  const count = 80;
+  for (let i = 0; i < count; i++) {
+    const star = document.createElement('div');
+    star.className = 'star' + (Math.random() > 0.85 ? ' gold' : '');
+    const size = 0.8 + Math.random() * 2.2;
+    star.style.width = size + 'px';
+    star.style.height = size + 'px';
+    star.style.left = Math.random() * 100 + '%';
+    star.style.top = Math.random() * 100 + '%';
+    star.style.animationDuration = (2 + Math.random() * 6) + 's';
+    star.style.animationDelay = -Math.random() * 6 + 's';
+    layer.appendChild(star);
+  }
+})();
+
+// ============== 데이터 ==============
+const characters = [
+  {
+    id: "michael",
+    name: "미카엘 팽송",
+    en: "MICHAEL PINSON",
+    archetype: "주인공 · 신 후보생",
+    layer: "protag",
+    importance: 100,
+    tagline: "전직 마취과 의사, 천사를 거쳐 신 후보생이 된 영혼. 18호 지구에서 '돌고래의 신'이 된다.",
+    description: "전작 『타나토노트』『천사들의 제국』의 주인공. 죽은 후 천사 학교를 거쳐 7번째 천국으로 올라온 영혼. 144명의 신 후보생 중 하나가 되어 매일 자신만의 인류를 만들고 다스리는 게임에 참가한다. 자신이 선택한 종족은 돌고래의 후손인 '돌고래 인간'들. 서툴지만 따뜻한 마음으로 자신의 인류를 이끌며, 동료 신 후보생들이 차례로 살해당하는 미스터리를 추적한다.",
+    events: [
+      { when: "1권", text: "에덴 마을에 도착, 144명의 신 후보생들과 만남" },
+      { when: "초반", text: "케이론에게 18호 지구의 돌고래 종족을 부여받음" },
+      { when: "전개", text: "동료들이 차례로 살해되는 사건의 진실을 추적" },
+      { when: "마타 하리", text: "동료 신 후보생 마타 하리와 사랑에 빠짐" },
+      { when: "절정", text: "올림푸스 산을 오르며 더 높은 차원으로 향함" },
+      { when: "결말", text: "창조주의 비밀, 차원의 진실을 마주함" },
+    ]
+  },
+  {
+    id: "mata",
+    name: "마타 하리",
+    en: "MATA HARI",
+    archetype: "여신 후보생 · 연인",
+    layer: "candidate",
+    importance: 85,
+    tagline: "스파이로 처형당했던 무용수, 신 후보생이 되어 미카엘과 사랑에 빠진다.",
+    description: "실존 인물 마타 하리(1876-1917). 제1차 세계대전 중 이중 스파이 혐의로 처형된 네덜란드 출신 무용수. 신 후보생들 중 가장 매혹적인 존재로, 미카엘 팽송의 연인이 된다. 관능적이면서도 지혜롭고, 위기의 순간마다 미카엘 곁에서 그를 지탱한다. 자신만의 인류를 다스리는 신이면서도 인간적인 감정을 가장 풍부하게 보여주는 인물.",
+    events: [
+      { when: "전생", text: "1차 대전 중 스파이로 몰려 프랑스에서 처형됨" },
+      { when: "에덴", text: "신 후보생 자격으로 에덴 마을 도착" },
+      { when: "전개", text: "미카엘과 사랑에 빠지며 동맹 관계 형성" },
+      { when: "탐험", text: "미카엘과 함께 올림푸스의 비밀을 추적" },
+    ]
+  },
+  {
+    id: "raoul",
+    name: "라울 라조르박",
+    en: "RAOUL RAZORBAK",
+    archetype: "오랜 친구 · 라이벌",
+    layer: "candidate",
+    importance: 90,
+    tagline: "타나토노트 시절부터 미카엘의 절친이자 라이벌, 야심에 사로잡힌 동료 신 후보생.",
+    description: "전작들에서부터 이어진 미카엘의 평생 친구. 천국을 처음 지도화한 모험가 '타나토노트'의 일원이었다. 신 후보생으로서는 야심이 크고, 미카엘보다 더 빠르게 위로 올라가려 한다. 우정과 경쟁심이 복잡하게 얽혀 있으며, 후반으로 갈수록 미카엘과 다른 길을 걷게 된다. 그가 선택한 종족은 독수리 인간들.",
+    events: [
+      { when: "전생", text: "지구에서 미카엘의 절친한 친구이자 동료 연구자" },
+      { when: "타나토노트", text: "함께 사후세계를 탐사한 모험가들의 일원" },
+      { when: "에덴", text: "신 후보생으로 함께 도착, 독수리 종족을 부여받음" },
+      { when: "갈등", text: "야심 때문에 미카엘과 갈등을 빚으며 멀어짐" },
+      { when: "후반", text: "올림푸스 정상으로 가는 또 다른 길을 시도" },
+    ]
+  },
+  {
+    id: "edmond",
+    name: "에드몽 웰즈",
+    en: "EDMOND WELLS",
+    archetype: "스승 · 정신적 안내자",
+    layer: "candidate",
+    importance: 80,
+    tagline: "『상대적이며 절대적인 지식의 백과사전』의 저자. 미카엘의 영원한 멘토.",
+    description: "베르베르 세계관 전반에 걸친 핵심 인물. 『개미』 시리즈의 학자이자, 천국에서도 미카엘을 인도해온 정신적 스승. 신 후보생으로서도 지혜의 화신처럼 등장하며, 백과사전의 새로운 항목들이 책 곳곳에서 인용된다. 미카엘이 길을 잃을 때마다 결정적인 통찰을 제공하는 안내자.",
+    events: [
+      { when: "전생", text: "지구에서 개미를 연구한 학자, 백과사전 저술" },
+      { when: "천국", text: "미카엘이 천사가 된 후에도 그의 멘토" },
+      { when: "신 후보생", text: "에덴에서도 지혜로운 안내자 역할 수행" },
+      { when: "유산", text: "백과사전이 책 전체에 인용되며 사상적 토대 제공" },
+    ]
+  },
+  {
+    id: "freddy",
+    name: "프레디 메이어",
+    en: "FREDDY MEYER",
+    archetype: "유머의 친구",
+    layer: "candidate",
+    importance: 65,
+    tagline: "랍비 출신 신 후보생, 유머와 신앙으로 무장한 미카엘의 동료.",
+    description: "랍비였던 신 후보생. 유머 감각과 깊은 종교적 통찰을 동시에 지닌 인물로, 무거운 분위기 속에서 따뜻함을 불어넣는다. 미카엘·마타 하리와 함께 핵심 동료 그룹을 형성하며, 자신만의 종족을 다스리면서도 동료들의 정신적 균형추 역할을 한다.",
+    events: [
+      { when: "전생", text: "지구에서 랍비로 활동" },
+      { when: "에덴", text: "신 후보생으로 도착, 미카엘 그룹의 일원" },
+      { when: "동행", text: "미카엘·마타 하리와 함께 행동하는 핵심 삼인방" },
+    ]
+  },
+  {
+    id: "marilyn",
+    name: "마릴린 먼로",
+    en: "MARILYN MONROE",
+    archetype: "여신 후보생",
+    layer: "candidate",
+    importance: 55,
+    tagline: "할리우드의 전설, 신 후보생이 되어 또 다른 자아를 탐색한다.",
+    description: "실존 인물 마릴린 먼로(1926-1962). 신 후보생들 중 가장 유명한 영혼 중 하나로, 자신만의 인류를 만들어 가르친다. 베르베르가 즐겨 사용하는 '실존 유명인의 사후 등장' 모티프의 대표적 인물.",
+    events: [
+      { when: "전생", text: "20세기 할리우드 최고의 스타, 의문사로 생을 마감" },
+      { when: "에덴", text: "신 후보생으로 등장, 자신의 종족을 부여받음" },
+    ]
+  },
+  {
+    id: "chiron",
+    name: "케이론",
+    en: "CHIRON",
+    archetype: "스승 · 켄타우로스",
+    layer: "mentor",
+    importance: 70,
+    tagline: "신 후보생들에게 신의 기예를 가르치는 현명한 켄타우로스 교사.",
+    description: "그리스 신화의 켄타우로스 케이론. 에덴 마을에서 144명의 신 후보생들에게 '신이 되는 법'을 가르치는 주된 교사. 각자에게 18호 지구의 종족을 배정하고, 매일 그들이 자신의 인류를 어떻게 다스리는지 평가한다. 엄격하면서도 따뜻한 스승.",
+    events: [
+      { when: "신화", text: "그리스 신화의 현자 켄타우로스, 영웅들의 스승" },
+      { when: "에덴", text: "신 후보생 학교의 주임 교사로 등장" },
+      { when: "수업", text: "매일 신 후보생들의 통치를 평가, 종족을 배정" },
+    ]
+  },
+  {
+    id: "zeus",
+    name: "제우스",
+    en: "ZEUS",
+    archetype: "올림푸스의 왕",
+    layer: "mentor",
+    importance: 75,
+    tagline: "올림푸스 12신의 정점, 신 후보생들 위에 군림하는 상위 신.",
+    description: "그리스 신화의 주신 제우스. 에덴 너머 올림푸스 산 위에 거주하며, 신 후보생들을 관장하는 더 높은 단계의 신. 미카엘이 차원의 위계를 거슬러 올라갈 때 마주하게 되는 거대한 권능의 존재. 그러나 그조차 진정한 창조주는 아니라는 것이 이 소설의 핵심 반전 중 하나.",
+    events: [
+      { when: "신화", text: "그리스 신화의 최고신, 번개의 왕" },
+      { when: "현재", text: "올림푸스에서 신 후보생들의 게임을 주재" },
+      { when: "절정", text: "미카엘이 그의 정체와 한계를 마주함" },
+    ]
+  },
+  {
+    id: "aphrodite",
+    name: "아프로디테",
+    en: "APHRODITE",
+    archetype: "사랑의 여신",
+    layer: "mentor",
+    importance: 60,
+    tagline: "올림푸스의 사랑의 여신, 신 후보생들에게 사랑의 본질을 묻는다.",
+    description: "그리스 신화의 사랑과 미의 여신. 에덴과 올림푸스를 오가며 신 후보생들에게 영감을 주는 인물. 미카엘과 마타 하리의 사랑을 지켜보며, 신이 된다는 것과 사랑한다는 것의 관계를 묻는다.",
+    events: [
+      { when: "신화", text: "사랑과 미의 여신, 바다의 거품에서 태어남" },
+      { when: "에덴", text: "신 후보생들에게 사랑의 본질을 가르침" },
+    ]
+  },
+  {
+    id: "shadow",
+    name: "검은 그림자",
+    en: "THE SHADOW DEICIDE",
+    archetype: "신 살해자",
+    layer: "antag",
+    importance: 90,
+    tagline: "동료 신 후보생들을 차례로 살해하는 정체불명의 존재. 핵심 미스터리.",
+    description: "이 소설의 가장 큰 수수께끼. 매일 밤 신 후보생들이 한 명씩 살해당하는데, 범인은 검은 망토를 두른 정체불명의 존재. 미카엘과 친구들은 이 살해자의 정체를 추적하며 에덴과 올림푸스의 더 깊은 비밀로 끌려간다. 그 정체가 밝혀지는 순간이 시리즈의 가장 큰 충격.",
+    events: [
+      { when: "1권 초반", text: "첫 신 후보생 살해 사건 발생" },
+      { when: "전개", text: "매 챕터마다 한 명씩 신 후보생들이 살해됨" },
+      { when: "추적", text: "미카엘과 동료들이 단서를 모으며 추적" },
+      { when: "정체", text: "충격적인 진실이 드러남 — 차원의 비밀과 연결됨" },
+    ]
+  },
+  {
+    id: "delphine",
+    name: "델핀 카멜레르",
+    en: "DELPHINE",
+    archetype: "지구의 사랑",
+    layer: "human",
+    importance: 50,
+    tagline: "미카엘이 천사 시절 도왔던 영혼, 그의 또 다른 사랑의 그림자.",
+    description: "전작 『천사들의 제국』부터 이어지는 미카엘의 여인. 지구에서의 인연이 천국과 신의 차원까지 영향을 미치는 베르베르 특유의 윤회/연속성 모티프를 보여주는 인물. 마타 하리와 대비되는 또 다른 사랑의 형태.",
+    events: [
+      { when: "전작", text: "『천사들의 제국』에서 미카엘이 돌본 영혼" },
+      { when: "현재", text: "기억과 영향으로 미카엘의 결정에 흔적을 남김" },
+    ]
+  },
+  {
+    id: "creator",
+    name: "위대한 창조주",
+    en: "THE GREAT CREATOR",
+    archetype: "9의 영역",
+    layer: "creator",
+    importance: 85,
+    tagline: "신들 위의 신. 올림푸스보다 더 높은 차원에 존재하는 궁극의 미스터리.",
+    description: "이 소설의 가장 큰 형이상학적 질문. 신 후보생들이 신이 되고, 그 위에 그리스 신들이 있고, 그 위에 또 누가 있는가? 미카엘은 올림푸스 산을 오르며 차원을 한 단계씩 넘어 마침내 9의 영역, 즉 진정한 창조주의 자리에 가까워진다. 그러나 그곳에서 마주하는 진실은 모든 위계를 다시 묻게 한다.",
+    events: [
+      { when: "암시", text: "에덴과 올림푸스보다 더 높은 차원의 존재로 암시됨" },
+      { when: "추구", text: "미카엘이 산을 오르며 점차 다가감" },
+      { when: "진실", text: "9의 영역에서 차원의 비밀이 풀림 — 시리즈의 종착점" },
+    ]
+  },
+];
+
+// 관계
+const relations = [
+  // 핵심 동료
+  { source: "michael", target: "mata", type: "love", strength: 10, label: "신 후보생들의 사랑" },
+  { source: "michael", target: "raoul", type: "friend", strength: 9, label: "타나토노트 이래의 친구·라이벌" },
+  { source: "michael", target: "edmond", type: "mentor", strength: 9, label: "영원한 스승" },
+  { source: "michael", target: "freddy", type: "friend", strength: 7, label: "삼인방의 동료" },
+  { source: "mata", target: "freddy", type: "friend", strength: 6, label: "미카엘의 동료들" },
+
+  // 신 후보생들끼리
+  { source: "raoul", target: "edmond", type: "friend", strength: 6, label: "오랜 동료" },
+  { source: "michael", target: "marilyn", type: "friend", strength: 4, label: "동료 신 후보생" },
+  { source: "marilyn", target: "mata", type: "friend", strength: 4, label: "여신 후보생들" },
+
+  // 스승들
+  { source: "michael", target: "chiron", type: "mentor", strength: 8, label: "신의 기예를 배움" },
+  { source: "raoul", target: "chiron", type: "mentor", strength: 7, label: "독수리 종족을 받음" },
+  { source: "mata", target: "chiron", type: "mentor", strength: 6, label: "신 후보생 교육" },
+  { source: "chiron", target: "zeus", type: "mentor", strength: 7, label: "올림푸스의 위계" },
+  { source: "michael", target: "aphrodite", type: "mentor", strength: 5, label: "사랑의 가르침" },
+  { source: "michael", target: "zeus", type: "mentor", strength: 6, label: "올림푸스의 권능" },
+
+  // 적대 — 검은 그림자
+  { source: "shadow", target: "michael", type: "hostile", strength: 9, label: "추적의 대상" },
+  { source: "shadow", target: "raoul", type: "hostile", strength: 7, label: "신 후보생 사냥" },
+  { source: "shadow", target: "mata", type: "hostile", strength: 7, label: "위협" },
+  { source: "shadow", target: "freddy", type: "hostile", strength: 6, label: "위협" },
+
+  // 인간 차원
+  { source: "michael", target: "delphine", type: "love", strength: 6, label: "지구로부터의 인연" },
+
+  // 창조주 차원 — 점선 dream
+  { source: "zeus", target: "creator", type: "dream", strength: 8, label: "위계의 너머" },
+  { source: "michael", target: "creator", type: "dream", strength: 7, label: "9의 영역을 향해" },
+  { source: "shadow", target: "creator", type: "dream", strength: 6, label: "비밀의 그림자" },
+];
+
+// ============== 색상 시스템 ==============
+const layerColors = {
+  protag: "#d4af37",      // 미카엘 — 황금
+  candidate: "#c8a8e0",   // 신 후보생들 — 자수정
+  mentor: "#4a7ba7",      // 그리스 신들 — 청금석
+  antag: "#8b2942",       // 검은 그림자 — 진홍
+  human: "#6b8e5a",       // 인간 — 올리브
+  creator: "#9aa4b8",     // 창조주 — 은회색
+};
+
+const linkColors = {
+  friend: "#4a7ba7",
+  love: "#d4af37",
+  hostile: "#8b2942",
+  mentor: "#c8a8e0",
+  dream: "#888888",
+};
+
+// ============== 그래프 ==============
+const svg = d3.select("#graph");
+const container = svg.node().parentNode;
+
+let width, height;
+function updateSize() {
+  const rect = container.getBoundingClientRect();
+  width = rect.width;
+  height = rect.height;
+  svg.attr("viewBox", `0 0 ${width} ${height}`);
+}
+updateSize();
+
+// SVG defs
+const defs = svg.append("defs");
+
+// Soft glow filter for divine beings
+const filter = defs.append("filter")
+  .attr("id", "glow")
+  .attr("x", "-50%").attr("y", "-50%")
+  .attr("width", "200%").attr("height", "200%");
+filter.append("feGaussianBlur").attr("stdDeviation", "2.5").attr("result", "coloredBlur");
+const merge = filter.append("feMerge");
+merge.append("feMergeNode").attr("in", "coloredBlur");
+merge.append("feMergeNode").attr("in", "SourceGraphic");
+
+// Concentric backdrop — like rings of heaven
+const backdrop = svg.append("g").attr("class", "backdrop");
+const cx = width / 2, cy = height / 2;
+[0.46, 0.34, 0.22, 0.1].forEach((r, i) => {
+  backdrop.append("circle")
+    .attr("cx", cx).attr("cy", cy)
+    .attr("r", Math.min(width, height) * r)
+    .attr("fill", "none")
+    .attr("stroke", "#d4af37")
+    .attr("stroke-opacity", 0.06 + (3-i) * 0.02)
+    .attr("stroke-width", 0.5)
+    .attr("stroke-dasharray", i % 2 === 0 ? "1 6" : null);
+});
+
+// Compass radial lines
+for (let a = 0; a < 360; a += 45) {
+  const rad = a * Math.PI / 180;
+  const r1 = Math.min(width, height) * 0.46;
+  const r2 = Math.min(width, height) * 0.5;
+  backdrop.append("line")
+    .attr("x1", cx + Math.cos(rad) * r1).attr("y1", cy + Math.sin(rad) * r1)
+    .attr("x2", cx + Math.cos(rad) * r2).attr("y2", cy + Math.sin(rad) * r2)
+    .attr("stroke", "#d4af37")
+    .attr("stroke-opacity", 0.25)
+    .attr("stroke-width", 0.5);
+}
+
+// Center compass mark
+backdrop.append("circle")
+  .attr("cx", cx).attr("cy", cy).attr("r", 2)
+  .attr("fill", "#d4af37").attr("opacity", 0.4);
+
+// Build node/link copies
+const nodes = characters.map(c => ({...c}));
+const links = relations.map(r => ({...r}));
+
+// Scales
+const radiusScale = d3.scaleLinear()
+  .domain([40, 100])
+  .range([22, 52]);
+
+const linkWidthScale = d3.scaleLinear()
+  .domain([1, 10])
+  .range([1, 4]);
+
+// Force simulation
+const simulation = d3.forceSimulation(nodes)
+  .force("link", d3.forceLink(links).id(d => d.id)
+    .distance(d => 200 - d.strength * 8)
+    .strength(d => 0.25 + d.strength * 0.04))
+  .force("charge", d3.forceManyBody()
+    .strength(d => -750 - d.importance * 7))
+  .force("center", d3.forceCenter(width / 2, height / 2).strength(0.04))
+  .force("collide", d3.forceCollide()
+    .radius(d => radiusScale(d.importance) + 16)
+    .strength(0.95))
+  .force("x", d3.forceX(width / 2).strength(0.04))
+  .force("y", d3.forceY(height / 2).strength(0.04));
+
+// Pin Michael as center anchor
+const michael = nodes.find(n => n.id === "michael");
+michael.fx = width / 2;
+michael.fy = height / 2;
+
+// Links group
+const linkGroup = svg.append("g").attr("class", "links");
+const linkPath = linkGroup.selectAll(".link")
+  .data(links)
+  .enter()
+  .append("path")
+  .attr("class", "link")
+  .attr("stroke", d => linkColors[d.type])
+  .attr("stroke-width", d => linkWidthScale(d.strength))
+  .attr("stroke-opacity", d => d.type === "dream" ? 0.4 : 0.55)
+  .attr("stroke-dasharray", d => d.type === "dream" ? "4 3" : null)
+  .attr("stroke-linecap", "round");
+
+const linkLabels = linkGroup.selectAll(".link-label")
+  .data(links)
+  .enter()
+  .append("text")
+  .attr("class", "link-label")
+  .text(d => d.label);
+
+// Nodes group
+const nodeGroup = svg.append("g").attr("class", "nodes");
+const nodeG = nodeGroup.selectAll(".node")
+  .data(nodes)
+  .enter()
+  .append("g")
+  .attr("class", d => "node" + (d.layer === "creator" || d.layer === "mentor" ? " divine" : ""))
+  .style("cursor", "pointer")
+  .call(d3.drag()
+    .on("start", dragStarted)
+    .on("drag", dragged)
+    .on("end", dragEnded));
+
+// Outer ring (decorative)
+nodeG.append("circle")
+  .attr("class", "node-ring")
+  .attr("r", d => radiusScale(d.importance) + 7)
+  .attr("fill", "none")
+  .attr("stroke", d => layerColors[d.layer])
+  .attr("stroke-opacity", 0.22)
+  .attr("stroke-width", 0.5)
+  .attr("stroke-dasharray", "1 3");
+
+// Main node circle
+nodeG.append("circle")
+  .attr("class", "node-circle")
+  .attr("r", d => radiusScale(d.importance))
+  .attr("fill", d => layerColors[d.layer])
+  .attr("fill-opacity", d => d.layer === "creator" ? 0.5 : (d.layer === "antag" ? 0.75 : 0.85))
+  .attr("stroke", d => d3.color(layerColors[d.layer]).brighter(0.5))
+  .attr("stroke-width", 1.2)
+  .attr("stroke-dasharray", d => (d.layer === "creator") ? "3 2" : null)
+  .attr("filter", d => (d.layer === "creator" || d.id === "michael" || d.layer === "mentor") ? "url(#glow)" : null);
+
+// Inner accent for protagonists / key characters
+nodeG.filter(d => d.id === "michael" || d.id === "mata" || d.id === "raoul" || d.id === "shadow")
+  .append("circle")
+  .attr("r", d => radiusScale(d.importance) - 7)
+  .attr("fill", "none")
+  .attr("stroke", "rgba(240, 233, 210, 0.35)")
+  .attr("stroke-width", 0.5);
+
+// Korean name
+nodeG.append("text")
+  .attr("class", "node-label")
+  .attr("dy", "0.05em")
+  .style("font-size", d => `${Math.max(11, radiusScale(d.importance) * 0.3)}px`)
+  .text(d => d.name);
+
+// English sublabel
+nodeG.append("text")
+  .attr("class", "node-sublabel")
+  .attr("dy", d => `${radiusScale(d.importance) * 0.55 + 2}px`)
+  .text(d => d.en);
+
+// Click
+nodeG.on("click", function(event, d) {
+  event.stopPropagation();
+  selectNode(d);
+});
+
+svg.on("click", () => selectNode(null));
+
+let selectedId = null;
+
+function selectNode(d) {
+  selectedId = d ? d.id : null;
+  updateDetail(d);
+  highlight(d);
+}
+
+function highlight(d) {
+  if (!d) {
+    nodeG.classed("dimmed", false);
+    nodeG.selectAll(".node-circle").classed("selected", false);
+    linkPath.classed("dimmed", false)
+      .attr("stroke-opacity", l => l.type === "dream" ? 0.4 : 0.55);
+    linkLabels.classed("dimmed", false);
+    return;
+  }
+  const connected = new Set([d.id]);
+  links.forEach(l => {
+    const sId = typeof l.source === 'object' ? l.source.id : l.source;
+    const tId = typeof l.target === 'object' ? l.target.id : l.target;
+    if (sId === d.id) connected.add(tId);
+    if (tId === d.id) connected.add(sId);
+  });
+  nodeG.classed("dimmed", n => !connected.has(n.id));
+  nodeG.selectAll(".node-circle").classed("selected", n => n.id === d.id);
+  linkPath.classed("dimmed", l => {
+    const sId = typeof l.source === 'object' ? l.source.id : l.source;
+    const tId = typeof l.target === 'object' ? l.target.id : l.target;
+    return !(sId === d.id || tId === d.id);
+  }).attr("stroke-opacity", l => {
+    const sId = typeof l.source === 'object' ? l.source.id : l.source;
+    const tId = typeof l.target === 'object' ? l.target.id : l.target;
+    return (sId === d.id || tId === d.id) ? 0.85 : 0.08;
+  });
+  linkLabels.classed("dimmed", l => {
+    const sId = typeof l.source === 'object' ? l.source.id : l.source;
+    const tId = typeof l.target === 'object' ? l.target.id : l.target;
+    return !(sId === d.id || tId === d.id);
+  });
+}
+
+function updateDetail(d) {
+  const panel = document.getElementById("detailContent");
+  if (!d) {
+    panel.innerHTML = `<div class="detail-empty">한 별을 클릭하면<br>그 인물의 시간이<br>여기 펼쳐집니다</div>`;
+    return;
+  }
+
+  const myRelations = relations.filter(r =>
+    r.source === d.id || r.target === d.id
+  ).map(r => {
+    const otherId = r.source === d.id ? r.target : r.source;
+    const other = characters.find(c => c.id === otherId);
+    return { other, type: r.type, label: r.label, strength: r.strength };
+  }).sort((a, b) => b.strength - a.strength);
+
+  let eventsHTML = '';
+  if (d.events && d.events.length > 0) {
+    eventsHTML = `
+      <div class="detail-section">
+        <div class="detail-section-title">주요 사건 · ÉVÉNEMENTS</div>
+        <ul class="event-list">
+          ${d.events.map(e => `
+            <li class="event-item">
+              <span class="when">${e.when}</span>
+              ${e.text}
+            </li>
+          `).join('')}
+        </ul>
+      </div>
+    `;
+  }
+
+  let relationsHTML = '';
+  if (myRelations.length > 0) {
+    relationsHTML = `
+      <div class="detail-section">
+        <div class="detail-section-title">관계 · LIENS</div>
+        <ul class="relation-list">
+          ${myRelations.map(r => `
+            <li class="relation-row">
+              <span class="arrow">→</span>
+              <span><span class="target">${r.other.name}</span> · ${r.label}</span>
+            </li>
+          `).join('')}
+        </ul>
+      </div>
+    `;
+  }
+
+  panel.innerHTML = `
+    <div class="detail-archetype">${d.archetype}</div>
+    <div class="detail-name">${d.name}</div>
+    <div class="detail-name-en">${d.en}</div>
+    <div class="detail-tagline">${d.tagline}</div>
+    <div class="detail-section">
+      <div class="detail-section-title">인물 · PERSONNAGE</div>
+      <div class="detail-text">${d.description}</div>
+    </div>
+    ${eventsHTML}
+    ${relationsHTML}
+  `;
+}
+
+// Tick — curved gentle paths
+simulation.on("tick", () => {
+  linkPath.attr("d", d => {
+    const dx = d.target.x - d.source.x;
+    const dy = d.target.y - d.source.y;
+    const dr = Math.sqrt(dx * dx + dy * dy) * 2.2;
+    return `M${d.source.x},${d.source.y}A${dr},${dr} 0 0,1 ${d.target.x},${d.target.y}`;
+  });
+
+  linkLabels
+    .attr("x", d => (d.source.x + d.target.x) / 2)
+    .attr("y", d => (d.source.y + d.target.y) / 2 - 4);
+
+  nodeG.attr("transform", d => `translate(${d.x},${d.y})`);
+});
+
+function dragStarted(event, d) {
+  if (!event.active) simulation.alphaTarget(0.3).restart();
+  d.fx = d.x;
+  d.fy = d.y;
+}
+function dragged(event, d) {
+  d.fx = event.x;
+  d.fy = event.y;
+}
+function dragEnded(event, d) {
+  if (!event.active) simulation.alphaTarget(0);
+  if (d.id !== "michael") {
+    d.fx = null;
+    d.fy = null;
+  }
+}
+
+// Resize
+window.addEventListener("resize", () => {
+  updateSize();
+  simulation.force("center", d3.forceCenter(width / 2, height / 2).strength(0.04));
+  michael.fx = width / 2;
+  michael.fy = height / 2;
+  simulation.alpha(0.3).restart();
+});
+
+// Hint fade
+setTimeout(() => {
+  document.getElementById("hint").classList.add("fade");
+}, 4500);
+
+simulation.alpha(1).restart();
+
+</script>
+
+</body>
+</html>

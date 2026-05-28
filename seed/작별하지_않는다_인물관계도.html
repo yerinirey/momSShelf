@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>작별하지 않는다 · 인물 관계도</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@200;300;400;500;600;700&family=Cormorant+Garamond:wght@300;400;500&family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --night: #0a0e14;
+    --night-deep: #050810;
+    --snow: #f5f3ee;
+    --snow-dim: #d8d3c8;
+    --ash: #2a2e36;
+    --ash-light: #3d4250;
+    --ember: #b8593c;
+    --frost: #6a8caa;
+    --frost-deep: #3a5878;
+    --pine: #2c4a3c;
+    --bone: #c8b896;
+    --shadow: rgba(5, 8, 16, 0.6);
+  }
+
+  body {
+    background: var(--night);
+    font-family: 'Noto Serif KR', serif;
+    color: var(--snow);
+    overflow-x: hidden;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at 20% 0%, rgba(106, 140, 170, 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 100%, rgba(184, 89, 60, 0.04) 0%, transparent 50%),
+      linear-gradient(180deg, var(--night-deep) 0%, var(--night) 50%, var(--night-deep) 100%);
+    background-attachment: fixed;
+  }
+
+  /* Falling snow effect */
+  .snow-layer {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    overflow: hidden;
+  }
+
+  .snowflake {
+    position: absolute;
+    background: rgba(245, 243, 238, 0.5);
+    border-radius: 50%;
+    animation: fall linear infinite;
+  }
+
+  @keyframes fall {
+    0% {
+      transform: translateY(-10px) translateX(0);
+      opacity: 0;
+    }
+    10% { opacity: 0.7; }
+    90% { opacity: 0.5; }
+    100% {
+      transform: translateY(110vh) translateX(20px);
+      opacity: 0;
+    }
+  }
+
+  .container {
+    position: relative;
+    z-index: 2;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 60px 32px 40px;
+  }
+
+  /* Header */
+  header {
+    text-align: center;
+    margin-bottom: 40px;
+    position: relative;
+  }
+
+  .epigraph {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 12px;
+    font-weight: 300;
+    letter-spacing: 8px;
+    color: var(--frost);
+    text-transform: uppercase;
+    margin-bottom: 24px;
+    opacity: 0.7;
+  }
+
+  .epigraph::before, .epigraph::after {
+    content: '—';
+    margin: 0 16px;
+    color: var(--frost-deep);
+  }
+
+  h1 {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: clamp(36px, 5.5vw, 64px);
+    font-weight: 200;
+    letter-spacing: -1px;
+    color: var(--snow);
+    line-height: 1.15;
+    margin-bottom: 18px;
+  }
+
+  h1 .accent {
+    font-weight: 800;
+    color: var(--snow);
+    letter-spacing: -2px;
+  }
+
+  .author {
+    font-family: 'Noto Serif KR', serif;
+    font-weight: 300;
+    font-size: 14px;
+    color: var(--snow-dim);
+    letter-spacing: 4px;
+    margin-bottom: 8px;
+  }
+
+  .author .name {
+    color: var(--snow);
+    font-weight: 500;
+    border-bottom: 1px solid var(--frost-deep);
+    padding-bottom: 2px;
+  }
+
+  .meta {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 24px;
+    font-size: 11px;
+    color: var(--snow-dim);
+    letter-spacing: 3px;
+    flex-wrap: wrap;
+    opacity: 0.7;
+  }
+
+  .meta .dot {
+    color: var(--ember);
+    margin: 0 8px;
+  }
+
+  /* Description */
+  .description {
+    text-align: center;
+    max-width: 780px;
+    margin: 0 auto 32px;
+    font-size: 14px;
+    line-height: 2.1;
+    color: var(--snow-dim);
+    font-weight: 300;
+    letter-spacing: 0.5px;
+  }
+
+  .description em {
+    font-style: normal;
+    color: var(--snow);
+    border-bottom: 1px dotted var(--frost);
+  }
+
+  /* Layout */
+  .layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  @media (max-width: 920px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { position: static !important; }
+  }
+
+  /* Sidebar */
+  .sidebar {
+    position: sticky;
+    top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-track { background: transparent; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--ash-light); border-radius: 2px; }
+
+  .panel {
+    background: rgba(10, 14, 20, 0.7);
+    border: 1px solid rgba(106, 140, 170, 0.15);
+    border-radius: 2px;
+    padding: 22px;
+    backdrop-filter: blur(12px);
+    position: relative;
+  }
+
+  .panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 24px;
+    height: 1px;
+    background: var(--ember);
+  }
+
+  .panel-title {
+    font-family: 'Nanum Myeongjo', serif;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 6px;
+    color: var(--snow);
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(106, 140, 170, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .panel-title .hanja {
+    font-size: 10px;
+    color: var(--frost);
+    letter-spacing: 4px;
+    font-weight: 400;
+  }
+
+  /* Legend */
+  .legend-section {
+    margin-bottom: 18px;
+  }
+  .legend-section:last-child { margin-bottom: 0; }
+
+  .legend-section-label {
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--frost);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    font-weight: 400;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 0;
+    font-size: 12px;
+    color: var(--snow);
+    font-weight: 300;
+    letter-spacing: 0.5px;
+  }
+
+  .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 1px solid rgba(245, 243, 238, 0.15);
+  }
+
+  .legend-line {
+    width: 22px;
+    height: 0;
+    flex-shrink: 0;
+  }
+
+  /* Detail panel */
+  .detail-panel {
+    min-height: 280px;
+  }
+
+  .detail-empty {
+    color: var(--snow-dim);
+    font-size: 12px;
+    text-align: center;
+    padding: 40px 8px;
+    line-height: 2;
+    font-style: italic;
+    opacity: 0.6;
+    font-weight: 300;
+    letter-spacing: 0.5px;
+  }
+
+  .detail-empty::before {
+    content: '';
+    display: block;
+    width: 24px;
+    height: 24px;
+    margin: 0 auto 16px;
+    border: 1px solid var(--frost-deep);
+    border-radius: 50%;
+  }
+
+  .detail-archetype {
+    font-size: 9px;
+    letter-spacing: 4px;
+    color: var(--ember);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+
+  .detail-name {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--snow);
+    margin-bottom: 4px;
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+  }
+
+  .detail-name-en {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    color: var(--frost);
+    margin-bottom: 16px;
+    letter-spacing: 4px;
+    font-weight: 400;
+  }
+
+  .detail-tagline {
+    font-size: 12px;
+    color: var(--snow);
+    margin-bottom: 16px;
+    padding: 10px 12px;
+    background: rgba(106, 140, 170, 0.08);
+    border-left: 2px solid var(--frost);
+    line-height: 1.7;
+    font-style: italic;
+    font-weight: 300;
+  }
+
+  .detail-section {
+    margin-bottom: 16px;
+  }
+
+  .detail-section-title {
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--frost);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .detail-section-title::before {
+    content: '';
+    width: 4px;
+    height: 4px;
+    background: var(--ember);
+    border-radius: 50%;
+  }
+
+  .detail-text {
+    font-size: 13px;
+    line-height: 1.85;
+    color: var(--snow);
+    font-weight: 300;
+    letter-spacing: 0.3px;
+  }
+
+  .event-list {
+    list-style: none;
+    padding: 0;
+  }
+
+  .event-item {
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--snow);
+    padding: 8px 0 8px 16px;
+    border-left: 1px solid rgba(106, 140, 170, 0.2);
+    margin-bottom: 4px;
+    position: relative;
+    font-weight: 300;
+  }
+
+  .event-item::before {
+    content: '';
+    position: absolute;
+    left: -3px;
+    top: 14px;
+    width: 5px;
+    height: 5px;
+    background: var(--frost);
+    border-radius: 50%;
+  }
+
+  .event-item .when {
+    color: var(--ember);
+    font-size: 10px;
+    letter-spacing: 1px;
+    display: block;
+    margin-bottom: 2px;
+    font-weight: 400;
+  }
+
+  .relation-list { list-style: none; padding: 0; }
+
+  .relation-row {
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--snow);
+    padding: 5px 0;
+    display: flex;
+    gap: 8px;
+    font-weight: 300;
+  }
+
+  .relation-row .arrow {
+    color: var(--frost);
+    flex-shrink: 0;
+  }
+
+  .relation-row .target {
+    color: var(--snow);
+    font-weight: 500;
+  }
+
+  /* Graph area */
+  .graph-container {
+    background: rgba(5, 8, 16, 0.5);
+    border: 1px solid rgba(106, 140, 170, 0.18);
+    border-radius: 2px;
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 1 / 1;
+    max-height: 820px;
+  }
+
+  /* Decorative tick marks at corners */
+  .tick {
+    position: absolute;
+    z-index: 3;
+    pointer-events: none;
+    color: var(--frost);
+    font-size: 10px;
+    letter-spacing: 2px;
+    font-family: 'Cormorant Garamond', serif;
+    opacity: 0.6;
+  }
+  .tick.tl { top: 12px; left: 14px; }
+  .tick.tr { top: 12px; right: 14px; }
+  .tick.bl { bottom: 12px; left: 14px; }
+  .tick.br { bottom: 12px; right: 14px; }
+
+  svg.graph {
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: grab;
+  }
+
+  svg.graph:active { cursor: grabbing; }
+
+  /* Node visuals */
+  .node-circle {
+    cursor: pointer;
+    transition: filter 0.3s ease;
+  }
+
+  .node-circle:hover {
+    filter: brightness(1.15);
+  }
+
+  .node-circle.selected {
+    stroke-width: 2.5 !important;
+  }
+
+  .node-label {
+    font-family: 'Nanum Myeongjo', serif;
+    font-weight: 700;
+    fill: var(--snow);
+    pointer-events: none;
+    user-select: none;
+    text-anchor: middle;
+    paint-order: stroke;
+    stroke: rgba(5, 8, 16, 0.7);
+    stroke-width: 3;
+    stroke-linejoin: round;
+  }
+
+  .node-sublabel {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 400;
+    fill: rgba(245, 243, 238, 0.6);
+    pointer-events: none;
+    user-select: none;
+    text-anchor: middle;
+    font-size: 9px;
+    letter-spacing: 2px;
+    paint-order: stroke;
+    stroke: rgba(5, 8, 16, 0.7);
+    stroke-width: 2;
+  }
+
+  .link {
+    fill: none;
+    transition: stroke-opacity 0.3s, stroke-width 0.3s;
+  }
+
+  .link-label {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 9px;
+    font-weight: 300;
+    fill: rgba(245, 243, 238, 0.45);
+    pointer-events: none;
+    user-select: none;
+    text-anchor: middle;
+    paint-order: stroke;
+    stroke: rgba(5, 8, 16, 0.85);
+    stroke-width: 3;
+  }
+
+  .dimmed { opacity: 0.12; }
+
+  /* Pulsing for ghost characters */
+  @keyframes ghost-pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.7; }
+  }
+  .ghost { animation: ghost-pulse 4s ease-in-out infinite; }
+
+  /* Footer */
+  footer {
+    margin-top: 48px;
+    padding-top: 28px;
+    border-top: 1px solid rgba(106, 140, 170, 0.15);
+    text-align: center;
+    font-size: 11px;
+    color: var(--snow-dim);
+    letter-spacing: 3px;
+    line-height: 2;
+    font-weight: 300;
+  }
+
+  footer .quote {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: 14px;
+    color: var(--snow);
+    margin-bottom: 12px;
+    letter-spacing: 1px;
+    font-weight: 300;
+    font-style: italic;
+  }
+
+  footer .ember-line {
+    color: var(--ember);
+    margin-bottom: 8px;
+  }
+
+  /* Hint */
+  .hint {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    background: rgba(5, 8, 16, 0.85);
+    color: var(--snow-dim);
+    font-size: 10px;
+    padding: 7px 12px;
+    border: 1px solid rgba(106, 140, 170, 0.2);
+    border-radius: 2px;
+    letter-spacing: 2px;
+    z-index: 5;
+    pointer-events: none;
+    transition: opacity 0.6s;
+  }
+  .hint.fade { opacity: 0; }
+
+</style>
+</head>
+<body>
+
+<!-- Snowfall layer -->
+<div class="snow-layer" id="snowLayer"></div>
+
+<div class="container">
+
+  <header>
+    <div class="epigraph">Han Kang · 2021</div>
+    <h1>
+      작별하지<br>
+      <span class="accent">않는다</span>
+    </h1>
+    <div class="author">
+      Novel by <span class="name">한강</span> · 韓江
+    </div>
+    <div class="meta">
+      <span>장편소설</span>
+      <span class="dot">·</span>
+      <span>문학동네</span>
+      <span class="dot">·</span>
+      <span>2024 노벨문학상</span>
+      <span class="dot">·</span>
+      <span>제주 4·3</span>
+    </div>
+  </header>
+
+  <p class="description">
+    <em>경하</em>·<em>인선</em>·<em>정심</em> — 세 여성의 시선이 눈처럼 겹쳐지며, 작별하지 못한 마음들이 세대를 가로질러 이어집니다.
+    원의 크기는 서사적 비중을, 연결선의 색은 관계의 결을 나타내며,
+    꿈과 현실의 경계를 살아가는 인물은 점선과 떨림으로 표시됩니다.
+  </p>
+
+  <div class="layout">
+
+    <aside class="sidebar">
+
+      <div class="panel">
+        <div class="panel-title">
+          <span>범례</span>
+          <span class="hanja">凡例</span>
+        </div>
+
+        <div class="legend-section">
+          <div class="legend-section-label">인물의 층위</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#d8d3c8;"></div>현재의 화자 · 경하</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#6a8caa;"></div>매개자 · 인선의 가족</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#b8593c;"></div>증언의 진원 · 정심</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#2c4a3c;"></div>4·3의 영혼들</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#c8b896;"></div>상징적 존재</div>
+        </div>
+
+        <div class="legend-section">
+          <div class="legend-section-label">관계의 결</div>
+          <div class="legend-item">
+            <svg width="22" height="6" style="flex-shrink:0;"><line x1="0" y1="3" x2="22" y2="3" stroke="#6a8caa" stroke-width="3"/></svg>
+            우정 · 연대
+          </div>
+          <div class="legend-item">
+            <svg width="22" height="6" style="flex-shrink:0;"><line x1="0" y1="3" x2="22" y2="3" stroke="#c8b896" stroke-width="3"/></svg>
+            혈연 · 모녀
+          </div>
+          <div class="legend-item">
+            <svg width="22" height="6" style="flex-shrink:0;"><line x1="0" y1="3" x2="22" y2="3" stroke="#b8593c" stroke-width="3"/></svg>
+            증언 · 애도
+          </div>
+          <div class="legend-item">
+            <svg width="22" height="6" style="flex-shrink:0;"><line x1="0" y1="3" x2="22" y2="3" stroke="#888" stroke-width="2" stroke-dasharray="3 2"/></svg>
+            꿈 · 환영 · 부재
+          </div>
+        </div>
+      </div>
+
+      <div class="panel detail-panel" id="detailPanel">
+        <div class="panel-title">
+          <span>인물</span>
+          <span class="hanja">人物</span>
+        </div>
+        <div id="detailContent">
+          <div class="detail-empty">
+            한 송이 눈을 클릭하면<br>
+            그 인물의 시간이<br>
+            여기 펼쳐집니다
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main>
+      <div class="graph-container">
+        <span class="tick tl">N · 北</span>
+        <span class="tick tr">E · 東</span>
+        <span class="tick bl">W · 西</span>
+        <span class="tick br">S · 南</span>
+        <svg class="graph" id="graph"></svg>
+        <div class="hint" id="hint">노드 클릭 · 드래그하여 이동</div>
+      </div>
+    </main>
+
+  </div>
+
+  <footer>
+    <div class="quote">"성근 눈이 내리고 있었다."</div>
+    <div class="ember-line">소설의 첫 문장 · 모든 것의 시작</div>
+    <div style="opacity: 0.6;">2021년 문학동네 출간 · 2023년 메디치 외국문학상 · 2025년 NBCC 소설부문상</div>
+  </footer>
+
+</div>
+
+<script>
+// ============== 눈 효과 ==============
+(function makeSnow() {
+  const layer = document.getElementById('snowLayer');
+  const count = 40;
+  for (let i = 0; i < count; i++) {
+    const flake = document.createElement('div');
+    flake.className = 'snowflake';
+    const size = 1 + Math.random() * 3;
+    flake.style.width = size + 'px';
+    flake.style.height = size + 'px';
+    flake.style.left = Math.random() * 100 + '%';
+    flake.style.animationDuration = (8 + Math.random() * 14) + 's';
+    flake.style.animationDelay = -Math.random() * 20 + 's';
+    flake.style.opacity = 0.3 + Math.random() * 0.5;
+    layer.appendChild(flake);
+  }
+})();
+
+// ============== 데이터 ==============
+const characters = [
+  {
+    id: "kyungha",
+    name: "경하",
+    en: "KYUNGHA",
+    archetype: "현재의 화자",
+    layer: "narrator",
+    importance: 100,
+    tagline: "광주의 학살을 다룬 책 한 권을 쓴 후, 묘비 같은 검은 통나무들이 끝없이 늘어선 꿈에 사로잡힌 소설가.",
+    description: "한강 작가 본인을 연상케 하는 분신적 인물. 더 이상 돌볼 가족도 일할 직장도 없는 고립의 정점에서 유서를 쓰고 있다. 친구 인선의 부탁으로 제주의 빈집을 향해 폭설을 뚫고 떠나며, 그곳에서 정심의 시간 속으로 들어선다.",
+    events: [
+      { when: "이전", text: "광주(소년이 온다)에 대한 책을 쓴 뒤 깊은 우울 속에 빠짐" },
+      { when: "도입", text: "묘비 같은 검은 통나무 꿈을 반복해서 꿈" },
+      { when: "발단", text: "유서를 쓰고 마지막 작별을 정리하던 중 인선의 연락을 받음" },
+      { when: "전개", text: "인선의 새 '아미'를 살리기 위해 폭설 속 제주로 떠남" },
+      { when: "절정", text: "인선의 빈집에서 정심의 일생, 4·3의 진실과 마주함" },
+    ]
+  },
+  {
+    id: "inseon",
+    name: "인선",
+    en: "INSEON",
+    archetype: "매개자 · 다큐멘터리스트",
+    layer: "kin",
+    importance: 95,
+    tagline: "만주와 베트남을 거쳐 '역사를 통과한 여성들'을 카메라에 담아온 다큐멘터리 감독, 그리고 제주 중산간의 목수.",
+    description: "경하의 오랜 친구. 어머니 정심의 4·3 기억을 작품으로 옮기기 위해 고향 제주로 돌아와 검은 통나무를 손수 깎고 있다. 작업 중 톱에 두 손가락이 잘리는 사고를 당해 서울 병원에 입원하면서, 자신의 새를 살려달라는 부탁으로 경하를 제주로 부른다.",
+    events: [
+      { when: "과거", text: "어머니 정심의 일생을 추적하는 다큐멘터리 작업 시작" },
+      { when: "현재", text: "제주에 정착해 4·3 프로젝트 '작별하지 않는다'를 위한 통나무를 깎음" },
+      { when: "사고", text: "전기톱에 두 손가락이 절단되는 사고로 서울 병원 입원" },
+      { when: "병상", text: "신경을 살리기 위해 3분마다 바늘로 손가락을 찌르는 치료를 받음" },
+      { when: "환영", text: "병원에서 갑자기 멀쩡한 몸으로 제주의 빈집에 나타남(꿈/현실의 경계)" },
+    ]
+  },
+  {
+    id: "jeongsim",
+    name: "정심",
+    en: "JEONGSIM",
+    archetype: "증언의 진원",
+    layer: "origin",
+    importance: 100,
+    tagline: "포기하지 않는 사랑 — 한강이 \"작별을 고하지 않은, 작별하지 않은 상태\"라 부른 마음.",
+    description: "인선의 어머니, 4·3의 생존자이자 평생의 증언자. 13세 무렵 토벌의 학살에서 살아남은 후, 실종된 오빠 강정훈의 행방을 찾기 위해 평생을 바쳤다. 눈이 내리면 시신들의 얼굴에 쌓인 눈을 털어내며 오빠를 찾던 그날을 떠올려 가슴이 답답해지고, 희생자들의 시신을 뜯어먹었을 고기들이 떠올라 바닷고기를 입에 대지 못했다. 산 자와 죽은 자 사이의 두 시간을 동시에 살았다.",
+    events: [
+      { when: "1948", text: "제주 4·3 발발, 가족 대부분이 학살되고 어린 정심만 생존" },
+      { when: "1950", text: "오빠 강정훈이 보도연맹·예비검속 등으로 끌려가 실종" },
+      { when: "평생", text: "오빠의 생존을 찾아 본토의 형무소·집단학살지 등 전국을 추적" },
+      { when: "노년", text: "딸 인선에게 4·3의 모든 자료와 증언을 물려줌" },
+      { when: "타계 후", text: "그녀의 마음이 곧 제목 '작별하지 않는다'가 됨" },
+    ]
+  },
+  {
+    id: "junghoon",
+    name: "강정훈",
+    en: "JUNG-HOON",
+    archetype: "사라진 오빠",
+    layer: "spirit",
+    importance: 70,
+    tagline: "정심이 평생을 걸어 찾아 헤맨 사람. 시신도 무덤도 없이 사라진 자.",
+    description: "정심의 오빠. 4·3 직후 보도연맹·예비검속 과정에서 끌려가 행방불명되었다. 시신이 어디에 묻혔는지조차 알 수 없는 그를 찾기 위해 정심은 평생 본토의 형무소 기록과 집단학살지를 더듬었다. 그의 부재가 정심의 모든 시간을 결정했다.",
+    events: [
+      { when: "4·3 직후", text: "당국에 끌려가 행방불명" },
+      { when: "추정", text: "본토의 형무소 또는 집단학살지에서 사망한 것으로 추정" },
+      { when: "유산", text: "정심을 통해, 인선을 통해, 경하를 통해 이름이 다시 호명됨" },
+    ]
+  },
+  {
+    id: "father",
+    name: "인선의 아버지",
+    en: "INSEON'S FATHER",
+    archetype: "또 다른 생존자",
+    layer: "kin",
+    importance: 50,
+    tagline: "정심과 함께 살았던, 4·3의 또 다른 생존자.",
+    description: "정심의 남편이자 인선의 아버지. 그 역시 4·3의 풍파를 겪고 살아남은 사람으로, 가족의 트라우마를 함께 짊어졌다. 소설에서는 정심과 인선의 모녀 서사 뒤편에 자리한다.",
+    events: [
+      { when: "과거", text: "정심을 만나 가정을 이룸, 4·3의 생존자로서 침묵을 공유" },
+    ]
+  },
+  {
+    id: "sister",
+    name: "정심의 여동생",
+    en: "JEONGSIM'S SISTER",
+    archetype: "또 다른 가족",
+    layer: "spirit",
+    importance: 40,
+    tagline: "정심의 곁을 지나간 또 한 사람의 가족.",
+    description: "정심의 여동생. 4·3의 가족사 안에서 정심의 기억과 증언에 등장하는 인물. 인선과 경하가 따라가는 정심의 일생 속에서 가족의 흔적으로 남는다.",
+    events: [
+      { when: "기억 속", text: "정심의 회상과 자료 속에서 호명됨" },
+    ]
+  },
+  {
+    id: "ami",
+    name: "아미",
+    en: "AMI · 새",
+    archetype: "상징 · 흰 앵무새",
+    layer: "symbol",
+    importance: 65,
+    tagline: "인선이 키우던 흰 앵무새. 죽었다가 다시 살아나는, 꿈과 현실의 경첩.",
+    description: "인선이 제주 빈집에서 키우던 새. 인선이 사고로 입원하자 먹이를 받지 못해 죽음에 처한다. 경하는 이 새를 살리기 위해 폭설을 뚫고 제주로 향한다. 죽은 새가 다시 살아나는 듯한 장면은 이 소설의 마술적 사실주의의 정점 — 산 자와 죽은 자, 꿈과 현실의 경계를 흐리는 영혼의 매개체.",
+    events: [
+      { when: "평소", text: "인선이 제주 빈집에서 정성껏 길러옴" },
+      { when: "사고 후", text: "인선의 부재로 굶어 죽을 위기에 처함" },
+      { when: "경하의 도착", text: "경하가 폭설 속 도착했을 때 이미 죽은 듯 보임" },
+      { when: "환영", text: "다시 살아 움직이는 것처럼 묘사됨 — 현실/환상의 경계" },
+    ]
+  },
+  {
+    id: "souls",
+    name: "4·3의 희생자들",
+    en: "THE DEPARTED",
+    archetype: "이름 없는 영혼들",
+    layer: "spirit",
+    importance: 75,
+    tagline: "오름과 땅굴마다 묻힌, 이름조차 호명되지 못한 수많은 사람들.",
+    description: "1948년 4월 3일부터 7년 7개월간 이어진 제주 4·3 사건의 희생자들. 김영갑이 사랑한 오름들 사이사이의 땅굴마다 그들의 유해가 묻혀 있다. 정심·인선·경하 세 여성이 평생에 걸쳐 호명하고 애도한 대상. 소설의 진정한 무게중심.",
+    events: [
+      { when: "1948.4.3", text: "제주 4·3 발발 — 무장봉기와 토벌의 시작" },
+      { when: "1948–1954", text: "약 3만 명의 도민이 학살, 실종" },
+      { when: "수십 년", text: "유해 발굴, 진상규명 운동, 그러나 여전히 미완" },
+      { when: "현재", text: "정심·인선·경하의 작업을 통해 호명됨" },
+    ]
+  },
+  {
+    id: "project",
+    name: "프로젝트",
+    en: "THE PROJECT",
+    archetype: "두 사람이 시작한 작업",
+    layer: "symbol",
+    importance: 55,
+    tagline: "경하와 인선이 함께 시작했다가 경하가 손을 뗀, 그러나 인선이 홀로 이어간 작품.",
+    description: "경하와 인선이 함께 기획한 4·3 추모 프로젝트. 경하가 \"할 수 없겠다\"고 했을 때, 인선은 \"일단 나는 계속하고 있을게\"라며 흔들리지 않고 혼자 통나무를 깎아왔다. 인선이 사고를 당했을 때 그 작업장이 미완성으로 남아 있었고, 경하는 결국 그 곁으로 가게 된다. 작별하지 않는 일.",
+    events: [
+      { when: "기획", text: "경하와 인선이 함께 4·3 추모 작품을 구상" },
+      { when: "중단", text: "경하가 광주 작업의 후유증으로 손을 뗌" },
+      { when: "계속", text: "인선은 \"나는 계속하고 있을게\"라며 홀로 진행" },
+      { when: "사고", text: "통나무 작업 중 손가락이 절단되는 사고 발생" },
+    ]
+  },
+];
+
+// 관계 — source → target, type, strength
+const relations = [
+  // 핵심 삼각구도
+  { source: "kyungha", target: "inseon", type: "friendship", strength: 10, label: "오랜 친구 · 함께 통과한 시간" },
+  { source: "inseon", target: "jeongsim", type: "blood", strength: 10, label: "어머니와 딸" },
+  { source: "kyungha", target: "jeongsim", type: "witness", strength: 9, label: "증언을 받아 안는 자" },
+
+  // 정심의 가족
+  { source: "jeongsim", target: "junghoon", type: "blood", strength: 10, label: "평생 찾아 헤맨 오빠" },
+  { source: "jeongsim", target: "father", type: "blood", strength: 6, label: "함께 살아남은 부부" },
+  { source: "father", target: "inseon", type: "blood", strength: 7, label: "아버지와 딸" },
+  { source: "jeongsim", target: "sister", type: "blood", strength: 5, label: "자매" },
+
+  // 영혼과의 관계 (점선/dream)
+  { source: "jeongsim", target: "souls", type: "witness", strength: 9, label: "평생의 애도" },
+  { source: "junghoon", target: "souls", type: "dream", strength: 8, label: "그들 중 하나" },
+  { source: "inseon", target: "souls", type: "witness", strength: 7, label: "기록으로 호명함" },
+  { source: "kyungha", target: "souls", type: "witness", strength: 6, label: "꿈을 통해 다가감" },
+
+  // 새 — 꿈과 현실의 경첩
+  { source: "inseon", target: "ami", type: "blood", strength: 7, label: "키우던 새" },
+  { source: "kyungha", target: "ami", type: "dream", strength: 8, label: "살려야 할 생명" },
+
+  // 프로젝트 — 두 사람을 잇는 작업
+  { source: "kyungha", target: "project", type: "friendship", strength: 6, label: "함께 시작" },
+  { source: "inseon", target: "project", type: "witness", strength: 9, label: "홀로 이어감" },
+  { source: "project", target: "souls", type: "witness", strength: 7, label: "그들을 위한 작업" },
+];
+
+// ============== 색상 시스템 ==============
+const layerColors = {
+  narrator: "#d8d3c8",  // 경하 — 눈빛 회백색
+  kin: "#6a8caa",       // 인선·아버지 — 차가운 푸른빛
+  origin: "#b8593c",    // 정심 — 사그라드는 잉걸불빛
+  spirit: "#2c4a3c",    // 영혼들 — 깊은 소나무 그늘
+  symbol: "#c8b896",    // 새·프로젝트 — 뼈와 나무의 빛
+};
+
+const linkColors = {
+  friendship: "#6a8caa",
+  blood: "#c8b896",
+  witness: "#b8593c",
+  dream: "#888888",
+};
+
+// ============== 그래프 ==============
+const svg = d3.select("#graph");
+const container = svg.node().parentNode;
+
+let width, height;
+function updateSize() {
+  const rect = container.getBoundingClientRect();
+  width = rect.width;
+  height = rect.height;
+  svg.attr("viewBox", `0 0 ${width} ${height}`);
+}
+updateSize();
+
+// SVG defs
+const defs = svg.append("defs");
+
+// Soft glow filter for spirits
+const filter = defs.append("filter")
+  .attr("id", "glow")
+  .attr("x", "-50%").attr("y", "-50%")
+  .attr("width", "200%").attr("height", "200%");
+filter.append("feGaussianBlur").attr("stdDeviation", "2.5").attr("result", "coloredBlur");
+const merge = filter.append("feMerge");
+merge.append("feMergeNode").attr("in", "coloredBlur");
+merge.append("feMergeNode").attr("in", "SourceGraphic");
+
+// Concentric backdrop — like ripples through ice
+const backdrop = svg.append("g").attr("class", "backdrop");
+const cx = width / 2, cy = height / 2;
+[0.46, 0.34, 0.22, 0.1].forEach((r, i) => {
+  backdrop.append("circle")
+    .attr("cx", cx).attr("cy", cy)
+    .attr("r", Math.min(width, height) * r)
+    .attr("fill", "none")
+    .attr("stroke", "#6a8caa")
+    .attr("stroke-opacity", 0.06 + (3-i) * 0.015)
+    .attr("stroke-width", 0.5)
+    .attr("stroke-dasharray", i % 2 === 0 ? "1 6" : null);
+});
+
+// Subtle radial lines (compass)
+for (let a = 0; a < 360; a += 45) {
+  const rad = a * Math.PI / 180;
+  const r1 = Math.min(width, height) * 0.46;
+  const r2 = Math.min(width, height) * 0.5;
+  backdrop.append("line")
+    .attr("x1", cx + Math.cos(rad) * r1).attr("y1", cy + Math.sin(rad) * r1)
+    .attr("x2", cx + Math.cos(rad) * r2).attr("y2", cy + Math.sin(rad) * r2)
+    .attr("stroke", "#6a8caa")
+    .attr("stroke-opacity", 0.2)
+    .attr("stroke-width", 0.5);
+}
+
+// Build node/link copies
+const nodes = characters.map(c => ({...c}));
+const links = relations.map(r => ({...r}));
+
+// Scales
+const radiusScale = d3.scaleLinear()
+  .domain([40, 100])
+  .range([22, 52]);
+
+const linkWidthScale = d3.scaleLinear()
+  .domain([1, 10])
+  .range([1, 4]);
+
+// Force simulation
+const simulation = d3.forceSimulation(nodes)
+  .force("link", d3.forceLink(links).id(d => d.id)
+    .distance(d => 200 - d.strength * 8)
+    .strength(d => 0.25 + d.strength * 0.04))
+  .force("charge", d3.forceManyBody()
+    .strength(d => -700 - d.importance * 7))
+  .force("center", d3.forceCenter(width / 2, height / 2).strength(0.04))
+  .force("collide", d3.forceCollide()
+    .radius(d => radiusScale(d.importance) + 16)
+    .strength(0.95))
+  .force("x", d3.forceX(width / 2).strength(0.04))
+  .force("y", d3.forceY(height / 2).strength(0.04));
+
+// Pin Kyungha as the narrator anchor — slightly off center
+const kyungha = nodes.find(n => n.id === "kyungha");
+kyungha.fx = width / 2;
+kyungha.fy = height / 2;
+
+// Links group
+const linkGroup = svg.append("g").attr("class", "links");
+const linkPath = linkGroup.selectAll(".link")
+  .data(links)
+  .enter()
+  .append("path")
+  .attr("class", "link")
+  .attr("stroke", d => linkColors[d.type])
+  .attr("stroke-width", d => linkWidthScale(d.strength))
+  .attr("stroke-opacity", d => d.type === "dream" ? 0.4 : 0.55)
+  .attr("stroke-dasharray", d => d.type === "dream" ? "4 3" : null)
+  .attr("stroke-linecap", "round");
+
+const linkLabels = linkGroup.selectAll(".link-label")
+  .data(links)
+  .enter()
+  .append("text")
+  .attr("class", "link-label")
+  .text(d => d.label);
+
+// Nodes group
+const nodeGroup = svg.append("g").attr("class", "nodes");
+const nodeG = nodeGroup.selectAll(".node")
+  .data(nodes)
+  .enter()
+  .append("g")
+  .attr("class", d => "node" + (d.layer === "spirit" || d.layer === "symbol" ? " ghost" : ""))
+  .style("cursor", "pointer")
+  .call(d3.drag()
+    .on("start", dragStarted)
+    .on("drag", dragged)
+    .on("end", dragEnded));
+
+// Outer ring (decorative)
+nodeG.append("circle")
+  .attr("class", "node-ring")
+  .attr("r", d => radiusScale(d.importance) + 7)
+  .attr("fill", "none")
+  .attr("stroke", d => layerColors[d.layer])
+  .attr("stroke-opacity", 0.18)
+  .attr("stroke-width", 0.5)
+  .attr("stroke-dasharray", "1 3");
+
+// Main node circle
+nodeG.append("circle")
+  .attr("class", "node-circle")
+  .attr("r", d => radiusScale(d.importance))
+  .attr("fill", d => layerColors[d.layer])
+  .attr("fill-opacity", d => d.layer === "spirit" ? 0.55 : (d.layer === "symbol" ? 0.7 : 0.85))
+  .attr("stroke", d => d3.color(layerColors[d.layer]).brighter(0.4))
+  .attr("stroke-width", 1)
+  .attr("stroke-dasharray", d => (d.layer === "spirit" || d.layer === "symbol") ? "3 2" : null)
+  .attr("filter", d => d.layer === "spirit" ? "url(#glow)" : null);
+
+// Inner accent for protagonists
+nodeG.filter(d => d.id === "kyungha" || d.id === "inseon" || d.id === "jeongsim")
+  .append("circle")
+  .attr("r", d => radiusScale(d.importance) - 7)
+  .attr("fill", "none")
+  .attr("stroke", "rgba(245, 243, 238, 0.3)")
+  .attr("stroke-width", 0.5);
+
+// Korean name
+nodeG.append("text")
+  .attr("class", "node-label")
+  .attr("dy", "0.05em")
+  .style("font-size", d => `${Math.max(11, radiusScale(d.importance) * 0.32)}px`)
+  .text(d => d.name);
+
+// English sublabel
+nodeG.append("text")
+  .attr("class", "node-sublabel")
+  .attr("dy", d => `${radiusScale(d.importance) * 0.55 + 2}px`)
+  .text(d => d.en);
+
+// Click
+nodeG.on("click", function(event, d) {
+  event.stopPropagation();
+  selectNode(d);
+});
+
+svg.on("click", () => selectNode(null));
+
+let selectedId = null;
+
+function selectNode(d) {
+  selectedId = d ? d.id : null;
+  updateDetail(d);
+  highlight(d);
+}
+
+function highlight(d) {
+  if (!d) {
+    nodeG.classed("dimmed", false);
+    nodeG.selectAll(".node-circle").classed("selected", false);
+    linkPath.classed("dimmed", false)
+      .attr("stroke-opacity", l => l.type === "dream" ? 0.4 : 0.55);
+    linkLabels.classed("dimmed", false);
+    return;
+  }
+  const connected = new Set([d.id]);
+  links.forEach(l => {
+    const sId = typeof l.source === 'object' ? l.source.id : l.source;
+    const tId = typeof l.target === 'object' ? l.target.id : l.target;
+    if (sId === d.id) connected.add(tId);
+    if (tId === d.id) connected.add(sId);
+  });
+  nodeG.classed("dimmed", n => !connected.has(n.id));
+  nodeG.selectAll(".node-circle").classed("selected", n => n.id === d.id);
+  linkPath.classed("dimmed", l => {
+    const sId = typeof l.source === 'object' ? l.source.id : l.source;
+    const tId = typeof l.target === 'object' ? l.target.id : l.target;
+    return !(sId === d.id || tId === d.id);
+  }).attr("stroke-opacity", l => {
+    const sId = typeof l.source === 'object' ? l.source.id : l.source;
+    const tId = typeof l.target === 'object' ? l.target.id : l.target;
+    return (sId === d.id || tId === d.id) ? 0.85 : 0.08;
+  });
+  linkLabels.classed("dimmed", l => {
+    const sId = typeof l.source === 'object' ? l.source.id : l.source;
+    const tId = typeof l.target === 'object' ? l.target.id : l.target;
+    return !(sId === d.id || tId === d.id);
+  });
+}
+
+function updateDetail(d) {
+  const panel = document.getElementById("detailContent");
+  if (!d) {
+    panel.innerHTML = `<div class="detail-empty">한 송이 눈을 클릭하면<br>그 인물의 시간이<br>여기 펼쳐집니다</div>`;
+    return;
+  }
+
+  // Find this character's relations
+  const myRelations = relations.filter(r =>
+    r.source === d.id || r.target === d.id
+  ).map(r => {
+    const otherId = r.source === d.id ? r.target : r.source;
+    const other = characters.find(c => c.id === otherId);
+    return { other, type: r.type, label: r.label, strength: r.strength };
+  }).sort((a, b) => b.strength - a.strength);
+
+  let eventsHTML = '';
+  if (d.events && d.events.length > 0) {
+    eventsHTML = `
+      <div class="detail-section">
+        <div class="detail-section-title">주요 사건 · 事件</div>
+        <ul class="event-list">
+          ${d.events.map(e => `
+            <li class="event-item">
+              <span class="when">${e.when}</span>
+              ${e.text}
+            </li>
+          `).join('')}
+        </ul>
+      </div>
+    `;
+  }
+
+  let relationsHTML = '';
+  if (myRelations.length > 0) {
+    relationsHTML = `
+      <div class="detail-section">
+        <div class="detail-section-title">관계 · 關係</div>
+        <ul class="relation-list">
+          ${myRelations.map(r => `
+            <li class="relation-row">
+              <span class="arrow">→</span>
+              <span><span class="target">${r.other.name}</span> · ${r.label}</span>
+            </li>
+          `).join('')}
+        </ul>
+      </div>
+    `;
+  }
+
+  panel.innerHTML = `
+    <div class="detail-archetype">${d.archetype}</div>
+    <div class="detail-name">${d.name}</div>
+    <div class="detail-name-en">${d.en}</div>
+    <div class="detail-tagline">${d.tagline}</div>
+    <div class="detail-section">
+      <div class="detail-section-title">인물 · 人物</div>
+      <div class="detail-text">${d.description}</div>
+    </div>
+    ${eventsHTML}
+    ${relationsHTML}
+  `;
+}
+
+// Tick — curved gentle paths
+simulation.on("tick", () => {
+  linkPath.attr("d", d => {
+    const dx = d.target.x - d.source.x;
+    const dy = d.target.y - d.source.y;
+    const dr = Math.sqrt(dx * dx + dy * dy) * 2.2;
+    return `M${d.source.x},${d.source.y}A${dr},${dr} 0 0,1 ${d.target.x},${d.target.y}`;
+  });
+
+  linkLabels
+    .attr("x", d => (d.source.x + d.target.x) / 2)
+    .attr("y", d => (d.source.y + d.target.y) / 2 - 4);
+
+  nodeG.attr("transform", d => `translate(${d.x},${d.y})`);
+});
+
+function dragStarted(event, d) {
+  if (!event.active) simulation.alphaTarget(0.3).restart();
+  d.fx = d.x;
+  d.fy = d.y;
+}
+function dragged(event, d) {
+  d.fx = event.x;
+  d.fy = event.y;
+}
+function dragEnded(event, d) {
+  if (!event.active) simulation.alphaTarget(0);
+  if (d.id !== "kyungha") {
+    d.fx = null;
+    d.fy = null;
+  }
+}
+
+// Resize
+window.addEventListener("resize", () => {
+  updateSize();
+  simulation.force("center", d3.forceCenter(width / 2, height / 2).strength(0.04));
+  kyungha.fx = width / 2;
+  kyungha.fy = height / 2;
+  simulation.alpha(0.3).restart();
+});
+
+// Hint fade
+setTimeout(() => {
+  document.getElementById("hint").classList.add("fade");
+}, 4500);
+
+simulation.alpha(1).restart();
+
+</script>
+
+</body>
+</html>
