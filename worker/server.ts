@@ -262,6 +262,10 @@ app.post("/generate", async (c) => {
   const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
   const userId = user.id;
 
+  // Cloudflare/Render 프록시가 SSE를 버퍼링하지 않도록 명시
+  c.header("X-Accel-Buffering", "no");
+  c.header("Cache-Control", "no-cache, no-transform");
+
   return streamSSE(c, async (stream) => {
     const send = (event: object) =>
       stream.writeSSE({ data: JSON.stringify(event) });
