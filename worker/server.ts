@@ -1,35 +1,38 @@
 /**
- * 엄마만의 서재 · 생성 워커
+ * 엄마만의 서재 · 생성 워커 (폴링 패턴)
  *
- * Render에 배포되어 /generate POST 한 엔드포인트만 처리.
- * Vercel(60s) / Supabase Edge(150s) 한도를 회피하기 위함.
+ * - POST /generate → {jobId} 즉시 반환, 백그라운드에서 생성 시작
+ * - GET  /jobs/:id → 현재 JobState 반환 (클라이언트가 1.5초마다 폴링)
+ *
+ * 짧은 HTTP 요청만 사용하므로 모바일 fetch timeout / 프록시 SSE 버퍼링 이슈 회피.
  *
  * 환경변수:
- *  - SUPABASE_URL
- *  - SUPABASE_ANON_KEY
+ *  - SUPABASE_URL (또는 NEXT_PUBLIC_SUPABASE_URL)
+ *  - SUPABASE_ANON_KEY (또는 NEXT_PUBLIC_SUPABASE_ANON_KEY)
  *  - SUPABASE_SERVICE_ROLE_KEY
  *  - ANTHROPIC_API_KEY
  *  - ALLOWED_EMAILS (쉼표 구분)
- *  - PORT (Render가 자동 주입)
+ *  - PORT
  *  - ALLOWED_ORIGINS (선택, 쉼표 구분 — 기본 *)
  */
 
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { streamSSE } from "hono/streaming";
 import { serve } from "@hono/node-server";
 import Anthropic from "@anthropic-ai/sdk";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import ws from "ws";
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { randomUUID } from "node:crypto";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ============ 상수 ============
 const CLAUDE_MODEL = "claude-sonnet-4-6";
 const ESTIMATED_OUTPUT_CHARS = 30_000;
+const JOB_TTL_MS = 10 * 60 * 1000;
 
 const TEMPLATE_HTML = readFileSync(
   join(__dirname, "base-template.html"),
@@ -41,7 +44,7 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? "*")
   .map((s) => s.trim())
   .filter(Boolean);
 
-// ============ 단계 감지 ============
+// ============ 단계 ============
 type Stage =
   | "thinking"
   | "header"
@@ -180,6 +183,191 @@ const SYSTEM_PROMPT = `당신은 한국 소설/영화의 인물 관계도 HTML�
 {{TEMPLATE_HTML}}
 </TEMPLATE>`;
 
+// ============ Job Store ============
+type JobStatus = "running" | "done" | "error";
+
+type JobState = {
+  status: JobStatus;
+  stage: Stage;
+  stageLabel: string;
+  receivedChars: number;
+  totalEstimate: number;
+  startedAt: number;
+  ownerUserId: string;
+  bookId?: string;
+  title?: string;
+  error?: string;
+};
+
+const jobs = new Map<string, JobState>();
+
+// 10분 지난 job 정리
+setInterval(() => {
+  const cutoff = Date.now() - JOB_TTL_MS;
+  for (const [id, state] of jobs) {
+    if (state.startedAt < cutoff) jobs.delete(id);
+  }
+}, 5 * 60 * 1000);
+
+// ============ 인증 헬퍼 ============
+async function authenticate(
+  authHeader: string | undefined,
+): Promise<{ userId: string; email: string } | { error: string; status: 401 | 403 }> {
+  if (!authHeader) return { error: "Authorization 헤더 없음", status: 401 };
+
+  const SUPABASE_URL = required("SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL");
+  const SUPABASE_ANON_KEY = required(
+    "SUPABASE_ANON_KEY",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+  );
+  const ALLOWED_EMAILS = (process.env.ALLOWED_EMAILS ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: authHeader } },
+    auth: { persistSession: false, autoRefreshToken: false },
+    realtime: { transport: ws as unknown as never },
+  });
+  const {
+    data: { user },
+  } = await userClient.auth.getUser();
+  if (!user?.email || !ALLOWED_EMAILS.includes(user.email)) {
+    return { error: "권한 없음", status: 403 };
+  }
+  return { userId: user.id, email: user.email };
+}
+
+// ============ 백그라운드 생성 ============
+async function runGeneration({
+  jobId,
+  title,
+  type,
+  author,
+  userId,
+  admin,
+  anthropic,
+}: {
+  jobId: string;
+  title: string;
+  type: "novel" | "movie";
+  author: string | null;
+  userId: string;
+  admin: SupabaseClient;
+  anthropic: Anthropic;
+}) {
+  const state = jobs.get(jobId);
+  if (!state) return;
+
+  try {
+    const systemBlocks = [
+      {
+        type: "text" as const,
+        text: SYSTEM_PROMPT.replace("{{TEMPLATE_HTML}}", TEMPLATE_HTML),
+        cache_control: { type: "ephemeral" as const },
+      },
+    ];
+
+    const userMsg = [
+      `작품 제목: ${title}`,
+      `종류: ${type === "movie" ? "영화" : "소설"}`,
+      author ? `${type === "movie" ? "감독" : "작가"}: ${author}` : null,
+      "",
+      "위 작품의 인물 관계도 HTML을 만들어주세요.",
+      "작품의 분위기·톤·시대 배경에 맞는 색상·폰트·배경 디자인을 적용하세요.",
+      "당신의 지식 안에서 정확한 인물·관계 정보를 채우고, 알 수 없는 부분은 합리적으로 생략하세요.",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const aStream = anthropic.messages.stream({
+      model: CLAUDE_MODEL,
+      max_tokens: 16000,
+      system: systemBlocks,
+      messages: [{ role: "user", content: userMsg }],
+    });
+
+    let html = "";
+    aStream.on("text", (text: string) => {
+      html += text;
+      state.receivedChars = html.length;
+      const newStage = detectStage(html, state.stage);
+      if (newStage !== state.stage) {
+        state.stage = newStage;
+        state.stageLabel = STAGE_LABELS[newStage];
+      }
+    });
+
+    await aStream.finalMessage();
+
+    state.receivedChars = html.length;
+    state.stage = "finalizing";
+    state.stageLabel = STAGE_LABELS.finalizing;
+
+    const trimmed = html.trim();
+    if (
+      !trimmed.startsWith("<!DOCTYPE html>") &&
+      !trimmed.startsWith("<!doctype html>")
+    ) {
+      state.status = "error";
+      state.error = "유효한 HTML이 생성되지 않았어요. 다시 시도해보세요.";
+      return;
+    }
+
+    state.stageLabel = "서재에 꽂는 중";
+
+    const cover = generateCoverConfig(title, type);
+    const year = new Date().getFullYear();
+
+    const { data: row, error: insErr } = await admin
+      .from("books")
+      .insert({
+        title,
+        type,
+        author,
+        year,
+        cover_config: cover,
+        summary: null,
+        html_path: "pending",
+        owner_id: userId,
+      })
+      .select("id")
+      .single();
+
+    if (insErr || !row) {
+      state.status = "error";
+      state.error = `DB 저장 실패: ${insErr?.message ?? "unknown"}`;
+      return;
+    }
+
+    const htmlPath = `books/${row.id}.html`;
+    const { error: upErr } = await admin.storage
+      .from("books")
+      .upload(htmlPath, trimmed, {
+        contentType: "text/html; charset=utf-8",
+        upsert: true,
+      });
+
+    if (upErr) {
+      await admin.from("books").delete().eq("id", row.id);
+      state.status = "error";
+      state.error = `Storage 업로드 실패: ${upErr.message}`;
+      return;
+    }
+
+    await admin.from("books").update({ html_path: htmlPath }).eq("id", row.id);
+
+    state.status = "done";
+    state.bookId = row.id;
+    state.title = title;
+  } catch (e) {
+    console.error(`[job ${jobId}] 생성 실패:`, e);
+    state.status = "error";
+    state.error = e instanceof Error ? e.message : "알 수 없는 오류";
+  }
+}
+
 // ============ 앱 ============
 const app = new Hono();
 
@@ -187,7 +375,7 @@ app.use(
   "*",
   cors({
     origin: ALLOWED_ORIGINS.includes("*") ? "*" : ALLOWED_ORIGINS,
-    allowMethods: ["POST", "OPTIONS"],
+    allowMethods: ["GET", "POST", "OPTIONS"],
     allowHeaders: ["authorization", "content-type", "apikey"],
     maxAge: 86400,
   }),
@@ -196,43 +384,13 @@ app.use(
 app.get("/", (c) =>
   c.json({ name: "moms-shelf-worker", ok: true, model: CLAUDE_MODEL }),
 );
+app.get("/health", (c) => c.json({ ok: true, activeJobs: jobs.size }));
 
-app.get("/health", (c) => c.json({ ok: true }));
-
+// POST /generate → {jobId}
 app.post("/generate", async (c) => {
-  const SUPABASE_URL = required("SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL");
-  const SUPABASE_ANON_KEY = required(
-    "SUPABASE_ANON_KEY",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-  );
-  const SERVICE_ROLE_KEY = required("SUPABASE_SERVICE_ROLE_KEY");
-  const ANTHROPIC_API_KEY = required("ANTHROPIC_API_KEY");
-  const ALLOWED_EMAILS = (process.env.ALLOWED_EMAILS ?? "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const auth = await authenticate(c.req.header("Authorization"));
+  if ("error" in auth) return c.json({ error: auth.error }, auth.status);
 
-  // 인증
-  const authHeader = c.req.header("Authorization");
-  if (!authHeader) {
-    return c.json({ error: "Authorization 헤더 없음" }, 401);
-  }
-
-  const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: { headers: { Authorization: authHeader } },
-    auth: { persistSession: false, autoRefreshToken: false },
-    realtime: { transport: ws as unknown as typeof WebSocket },
-  });
-
-  const {
-    data: { user },
-  } = await userClient.auth.getUser();
-
-  if (!user?.email || !ALLOWED_EMAILS.includes(user.email)) {
-    return c.json({ error: "권한 없음" }, 403);
-  }
-
-  // body
   const body = await c.req.json().catch(() => null);
   if (!body) return c.json({ error: "잘못된 요청" }, 400);
   const title = body.title?.trim();
@@ -242,11 +400,16 @@ app.post("/generate", async (c) => {
     return c.json({ error: "title과 type 필수" }, 400);
   }
 
-  // 중복 체크
+  const SUPABASE_URL = required("SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL");
+  const SERVICE_ROLE_KEY = required("SUPABASE_SERVICE_ROLE_KEY");
+  const ANTHROPIC_API_KEY = required("ANTHROPIC_API_KEY");
+
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
-    realtime: { transport: ws as unknown as typeof WebSocket },
+    realtime: { transport: ws as unknown as never },
   });
+
+  // 중복 체크
   const { data: dup } = await admin
     .from("books")
     .select("id")
@@ -259,151 +422,48 @@ app.post("/generate", async (c) => {
     );
   }
 
-  const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
-  const userId = user.id;
-
-  // Cloudflare/Render 프록시가 SSE를 버퍼링하지 않도록 명시
-  c.header("X-Accel-Buffering", "no");
-  c.header("Cache-Control", "no-cache, no-transform");
-
-  return streamSSE(c, async (stream) => {
-    const send = (event: object) =>
-      stream.writeSSE({ data: JSON.stringify(event) });
-
-    try {
-      await send({ type: "started", estimated_chars: ESTIMATED_OUTPUT_CHARS });
-
-      const systemBlocks = [
-        {
-          type: "text" as const,
-          text: SYSTEM_PROMPT.replace("{{TEMPLATE_HTML}}", TEMPLATE_HTML),
-          cache_control: { type: "ephemeral" as const },
-        },
-      ];
-
-      const userMsg = [
-        `작품 제목: ${title}`,
-        `종류: ${type === "movie" ? "영화" : "소설"}`,
-        author ? `${type === "movie" ? "감독" : "작가"}: ${author}` : null,
-        "",
-        "위 작품의 인물 관계도 HTML을 만들어주세요.",
-        "작품의 분위기·톤·시대 배경에 맞는 색상·폰트·배경 디자인을 적용하세요.",
-        "당신의 지식 안에서 정확한 인물·관계 정보를 채우고, 알 수 없는 부분은 합리적으로 생략하세요.",
-      ]
-        .filter(Boolean)
-        .join("\n");
-
-      const aStream = anthropic.messages.stream({
-        model: CLAUDE_MODEL,
-        max_tokens: 16000,
-        system: systemBlocks,
-        messages: [{ role: "user", content: userMsg }],
-      });
-
-      let html = "";
-      let stage: Stage = "thinking";
-      let lastSent = Date.now();
-      let charsAtLastSend = 0;
-
-      aStream.on("text", (text: string) => {
-        html += text;
-        const newStage = detectStage(html, stage);
-        if (newStage !== stage) {
-          stage = newStage;
-          void send({ type: "stage", stage, label: STAGE_LABELS[stage] });
-        }
-        const now = Date.now();
-        if (now - lastSent > 250 || html.length - charsAtLastSend > 1024) {
-          void send({ type: "delta", received_chars: html.length });
-          lastSent = now;
-          charsAtLastSend = html.length;
-        }
-      });
-
-      await aStream.finalMessage();
-
-      await send({ type: "delta", received_chars: html.length });
-      await send({
-        type: "stage",
-        stage: "finalizing",
-        label: STAGE_LABELS.finalizing,
-      });
-
-      const trimmed = html.trim();
-      if (
-        !trimmed.startsWith("<!DOCTYPE html>") &&
-        !trimmed.startsWith("<!doctype html>")
-      ) {
-        await send({
-          type: "error",
-          error: "유효한 HTML이 생성되지 않았어요. 다시 시도해보세요.",
-        });
-        return;
-      }
-
-      await send({
-        type: "stage",
-        stage: "finalizing",
-        label: "서재에 꽂는 중",
-      });
-
-      const cover = generateCoverConfig(title, type);
-      const year = new Date().getFullYear();
-
-      const { data: row, error: insErr } = await admin
-        .from("books")
-        .insert({
-          title,
-          type,
-          author,
-          year,
-          cover_config: cover,
-          summary: null,
-          html_path: "pending",
-          owner_id: userId,
-        })
-        .select("id")
-        .single();
-
-      if (insErr || !row) {
-        await send({
-          type: "error",
-          error: `DB 저장 실패: ${insErr?.message ?? "unknown"}`,
-        });
-        return;
-      }
-
-      const htmlPath = `books/${row.id}.html`;
-      const { error: upErr } = await admin.storage
-        .from("books")
-        .upload(htmlPath, trimmed, {
-          contentType: "text/html; charset=utf-8",
-          upsert: true,
-        });
-
-      if (upErr) {
-        await admin.from("books").delete().eq("id", row.id);
-        await send({
-          type: "error",
-          error: `Storage 업로드 실패: ${upErr.message}`,
-        });
-        return;
-      }
-
-      await admin
-        .from("books")
-        .update({ html_path: htmlPath })
-        .eq("id", row.id);
-
-      await send({ type: "complete", id: row.id, title });
-    } catch (e) {
-      console.error("생성 실패:", e);
-      await send({
-        type: "error",
-        error: e instanceof Error ? e.message : "알 수 없는 오류",
-      });
-    }
+  // Job 생성
+  const jobId = randomUUID();
+  jobs.set(jobId, {
+    status: "running",
+    stage: "thinking",
+    stageLabel: STAGE_LABELS.thinking,
+    receivedChars: 0,
+    totalEstimate: ESTIMATED_OUTPUT_CHARS,
+    startedAt: Date.now(),
+    ownerUserId: auth.userId,
   });
+
+  const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
+
+  // 백그라운드 실행 — await 하지 않음
+  void runGeneration({
+    jobId,
+    title,
+    type,
+    author,
+    userId: auth.userId,
+    admin,
+    anthropic,
+  });
+
+  return c.json({ jobId, totalEstimate: ESTIMATED_OUTPUT_CHARS });
+});
+
+// GET /jobs/:id → JobState
+app.get("/jobs/:id", async (c) => {
+  const auth = await authenticate(c.req.header("Authorization"));
+  if ("error" in auth) return c.json({ error: auth.error }, auth.status);
+
+  const state = jobs.get(c.req.param("id"));
+  if (!state) return c.json({ error: "job not found" }, 404);
+  if (state.ownerUserId !== auth.userId) {
+    return c.json({ error: "권한 없음" }, 403);
+  }
+
+  // ownerUserId는 외부에 안 보이게
+  const { ownerUserId: _omit, ...publicState } = state;
+  return c.json(publicState);
 });
 
 function required(...names: string[]): string {

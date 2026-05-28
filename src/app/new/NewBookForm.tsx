@@ -86,6 +86,86 @@ type ServerEvent =
   | { type: "complete"; id: string; title: string }
   | { type: "error"; error: string };
 
+type JobState = {
+  status: "running" | "done" | "error";
+  stage: StageKey;
+  stageLabel: string;
+  receivedChars: number;
+  totalEstimate: number;
+  bookId?: string;
+  title?: string;
+  error?: string;
+};
+
+/**
+ * 워커 모드 — 짧은 HTTP 요청만 사용 (모바일 친화):
+ *   1. POST /generate → {jobId} 받기
+ *   2. GET /jobs/:id 를 1.5초마다 폴링
+ *   3. status가 done/error일 때까지 반복
+ */
+async function runPollingFlow({
+  workerOrigin,
+  url,
+  headers,
+  body,
+  onStage,
+  onChars,
+  onComplete,
+  onError,
+}: {
+  workerOrigin: string;
+  url: string;
+  headers: Record<string, string>;
+  body: { title: string; type: "novel" | "movie"; author?: string };
+  onStage: (s: StageKey) => void;
+  onChars: (n: number) => void;
+  onComplete: (bookId: string) => void;
+  onError: (msg: string) => void;
+}): Promise<void> {
+  // 1) 시작
+  const startRes = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...headers },
+    body: JSON.stringify(body),
+  });
+  if (!startRes.ok) {
+    const data = await startRes.json().catch(() => null);
+    onError(data?.error ?? `요청 실패 (HTTP ${startRes.status})`);
+    return;
+  }
+  const { jobId } = (await startRes.json()) as { jobId: string };
+
+  // 2) 폴링
+  const pollUrl = `${workerOrigin}/jobs/${jobId}`;
+  const maxDuration = 5 * 60 * 1000; // 5분 안전 한도
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < maxDuration) {
+    await new Promise((r) => setTimeout(r, 1500));
+
+    const pollRes = await fetch(pollUrl, { headers, cache: "no-store" });
+    if (!pollRes.ok) {
+      onError(`폴링 실패 (HTTP ${pollRes.status})`);
+      return;
+    }
+    const state = (await pollRes.json()) as JobState;
+
+    onStage(state.stage);
+    onChars(state.receivedChars);
+
+    if (state.status === "done" && state.bookId) {
+      onComplete(state.bookId);
+      return;
+    }
+    if (state.status === "error") {
+      onError(state.error ?? "생성 실패");
+      return;
+    }
+  }
+
+  onError("시간 초과 (5분). 잠시 후 다시 시도해주세요.");
+}
+
 export function NewBookForm() {
   const router = useRouter();
   const [title, setTitle] = useState("");
@@ -115,58 +195,39 @@ export function NewBookForm() {
     try {
       const { url, headers, workerOrigin } = await getGenerateEndpoint();
 
-      // Render 무료 티어가 잠들어있으면 첫 응답이 30초까지 걸려
-      // 모바일 브라우저 fetch timeout(10~30초)에 걸리므로 먼저 깨움
       if (workerOrigin) {
-        await wakeWorker(workerOrigin).catch(() => {
-          // 깨우기 실패해도 본 요청에서 한 번 더 시도 — 여기선 무시
+        // 워커 모드: 폴링 패턴
+        await wakeWorker(workerOrigin).catch(() => {});
+        setCurrentStage("thinking");
+        await runPollingFlow({
+          workerOrigin,
+          url,
+          headers,
+          body: {
+            title: title.trim(),
+            type,
+            author: author.trim() || undefined,
+          },
+          onStage: setCurrentStage,
+          onChars: setReceivedChars,
+          onComplete: (bookId) => {
+            setReceivedChars(ESTIMATED_CHARS);
+            setCurrentStage("finalizing");
+            setTimeout(() => router.push(`/book/${bookId}`), 600);
+          },
+          onError: (msg) => {
+            setError(msg);
+            setLoading(false);
+          },
         });
-      }
-      setCurrentStage("thinking");
-
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...headers },
-        body: JSON.stringify({
+      } else {
+        // 로컬 모드: SSE 스트림 직접 읽기
+        setCurrentStage("thinking");
+        await runSseFlow(url, headers, {
           title: title.trim(),
           type,
           author: author.trim() || undefined,
-        }),
-      });
-
-      if (!res.ok || !res.body) {
-        // 409 같이 JSON 에러로 끝난 경우
-        const data = await res.json().catch(() => null);
-        setError(data?.error ?? `요청 실패 (HTTP ${res.status})`);
-        setLoading(false);
-        clearInterval(elapsedTimer);
-        return;
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const parts = buffer.split("\n\n");
-        buffer = parts.pop() ?? "";
-
-        for (const part of parts) {
-          const line = part.trim();
-          if (!line.startsWith("data:")) continue;
-          const json = line.slice(5).trim();
-          let event: ServerEvent;
-          try {
-            event = JSON.parse(json);
-          } catch {
-            continue;
-          }
-          handleEvent(event);
-        }
+        });
       }
     } catch (e) {
       const err = e as Error;
@@ -183,6 +244,46 @@ export function NewBookForm() {
       clearInterval(elapsedTimer);
     }
 
+    async function runSseFlow(
+      url: string,
+      headers: Record<string, string>,
+      body: { title: string; type: BookType; author?: string },
+    ) {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...headers },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => null);
+        setError(data?.error ?? `요청 실패 (HTTP ${res.status})`);
+        setLoading(false);
+        return;
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() ?? "";
+        for (const part of parts) {
+          const line = part.trim();
+          if (!line.startsWith("data:")) continue;
+          const json = line.slice(5).trim();
+          let event: ServerEvent;
+          try {
+            event = JSON.parse(json);
+          } catch {
+            continue;
+          }
+          handleEvent(event);
+        }
+      }
+    }
+
     function handleEvent(ev: ServerEvent) {
       switch (ev.type) {
         case "started":
@@ -197,7 +298,6 @@ export function NewBookForm() {
         case "complete":
           setReceivedChars((c) => Math.max(c, ESTIMATED_CHARS));
           setCurrentStage("finalizing");
-          // 살짝 텀을 두고 이동 (사용자가 완료 상태를 인지)
           setTimeout(() => {
             router.push(`/book/${ev.id}`);
           }, 600);
