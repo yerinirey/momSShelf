@@ -135,7 +135,15 @@ export function NewBookForm() {
         }
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "네트워크 오류");
+      const err = e as Error;
+      const details = [
+        err.message,
+        err.name && err.name !== "Error" ? `(${err.name})` : "",
+        `UA: ${navigator.userAgent.slice(0, 80)}`,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      setError(details);
       setLoading(false);
     } finally {
       clearInterval(elapsedTimer);
